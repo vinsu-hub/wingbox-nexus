@@ -11,6 +11,12 @@ import { ComplianceView } from "@/pages/Compliance/ComplianceView";
 import { LifeTrackingView } from "@/pages/LifeTracking/LifeTrackingView";
 import { ReportsPage } from "@/pages/Reports/ReportsPage";
 import { PartsRequestsPage } from "@/pages/PartsRequests/PartsRequestsPage";
+import { MaintenanceHistoryView } from "@/pages/MaintenanceHistory/MaintenanceHistoryView";
+import { DocumentsView } from "@/pages/Documents/DocumentsView";
+import { TechnicalLibraryPage } from "@/pages/TechnicalLibrary/TechnicalLibraryPage";
+import { PresentationsPage } from "@/pages/Presentations/PresentationsPage";
+import { AiAssistantPage } from "@/pages/AiAssistant/AiAssistantPage";
+import { InspectionPresentationPage } from "@/pages/InspectionPresentation/InspectionPresentationPage";
 
 function App() {
   return (
@@ -27,6 +33,12 @@ function App() {
         <Route path="/life-tracking" component={() => <Layout><LifeTrackingView /></Layout>} />
         <Route path="/reports" component={() => <Layout><ReportsPage /></Layout>} />
         <Route path="/parts-requests" component={() => <Layout><PartsRequestsPage /></Layout>} />
+        <Route path="/maintenance-history" component={() => <Layout><MaintenanceHistoryView /></Layout>} />
+        <Route path="/documents" component={() => <Layout><DocumentsView /></Layout>} />
+        <Route path="/technical-library" component={() => <Layout><TechnicalLibraryPage /></Layout>} />
+        <Route path="/presentations" component={() => <Layout><PresentationsPage /></Layout>} />
+        <Route path="/ai-assistant" component={() => <Layout><AiAssistantPage /></Layout>} />
+        <Route path="/inspection-presentation/:id?" component={() => <Layout><InspectionPresentationPage /></Layout>} />
         <Route path="/view/:slug">{params => <Layout><MissingView slug={params.slug} /></Layout>}</Route>
         <Route component={LoginPage} />
       </Switch>

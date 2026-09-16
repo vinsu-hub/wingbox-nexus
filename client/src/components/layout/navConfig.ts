@@ -43,10 +43,10 @@ export const navGroups: NavGroup[] = [
     items: [
       item("Fleet", Plane, ROUTES.fleet),
       item("Components", Box),
-      item("Maintenance History", History),
+      item("Maintenance History", History, ROUTES.maintenanceHistory),
       item("Compliance", ShieldCheck, ROUTES.compliance),
       item("Life Tracking", Activity, ROUTES.lifeTracking),
-      item("Documents", FileText),
+      item("Documents", FileText, ROUTES.documents),
     ],
   },
   {
@@ -60,8 +60,8 @@ export const navGroups: NavGroup[] = [
   {
     label: "TECHNICAL",
     items: [
-      item("AI Assistant", Sparkles),
-      item("Technical Library", BookOpen),
+      item("AI Assistant", Sparkles, ROUTES.aiAssistant),
+      item("Technical Library", BookOpen, ROUTES.technicalLibrary),
       item("Knowledge Base", HelpCircle),
     ],
   },
@@ -69,7 +69,7 @@ export const navGroups: NavGroup[] = [
     label: "REPORTS",
     items: [
       item("Reports", FileBarChart, ROUTES.reports),
-      item("Presentations", FileCheck2),
+      item("Presentations", FileCheck2, ROUTES.presentations),
     ],
   },
   {

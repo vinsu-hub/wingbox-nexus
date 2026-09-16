@@ -9,6 +9,12 @@ export const ROUTES = {
   lifeTracking: "/life-tracking",
   reports: "/reports",
   partsRequests: "/parts-requests",
+  maintenanceHistory: "/maintenance-history",
+  documents: "/documents",
+  technicalLibrary: "/technical-library",
+  presentations: "/presentations",
+  aiAssistant: "/ai-assistant",
+  inspectionPresentation: (id?: string) => `/inspection-presentation${id ? `/${id}` : ""}`,
   view: (slug: string) => `/view/${slug}`,
 } as const;
 

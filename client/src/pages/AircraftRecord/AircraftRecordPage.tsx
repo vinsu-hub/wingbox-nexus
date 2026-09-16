@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverviewTab } from "./OverviewTab";
 import { ComplianceView } from "@/pages/Compliance/ComplianceView";
 import { LifeTrackingView } from "@/pages/LifeTracking/LifeTrackingView";
+import { MaintenanceHistoryView } from "@/pages/MaintenanceHistory/MaintenanceHistoryView";
+import { DocumentsView } from "@/pages/Documents/DocumentsView";
 
 const tabs = ["Overview", "Maintenance History", "Compliance", "Life Tracking", "Documents"];
 
@@ -41,14 +43,10 @@ export function AircraftRecordPage() {
           <motion.div key={tab + record.tail} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.15 }}>
             <TabsContent value={tab}>
               {tab === "Overview" && <OverviewTab record={record} onSelectTab={setTab} />}
+              {tab === "Maintenance History" && <MaintenanceHistoryView tailNumber={record.tail} />}
               {tab === "Compliance" && <ComplianceView tailNumber={record.tail} />}
               {tab === "Life Tracking" && <LifeTrackingView tailNumber={record.tail} />}
-              {(tab === "Maintenance History" || tab === "Documents") && (
-                <div className="aircraft-record-placeholder">
-                  <h2>{tab}</h2>
-                  <p>{tab} is being finalized in a separate workstream.</p>
-                </div>
-              )}
+              {tab === "Documents" && <DocumentsView tailNumber={record.tail} />}
             </TabsContent>
           </motion.div>
         </AnimatePresence>
