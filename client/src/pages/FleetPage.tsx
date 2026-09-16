@@ -30,7 +30,7 @@ export function FleetPage() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All Status");
   const [type, setType] = useState("All Types");
-  const [selected, setSelected] = useState<Aircraft>(aircraft[0]);
+  const selected: Aircraft = aircraft[0];
   const [showModal, setShowModal] = useState(false);
   const filtered = useMemo(
     () =>
@@ -92,7 +92,7 @@ export function FleetPage() {
               </thead>
               <tbody>
                 {filtered.map(row => (
-                  <tr key={row.tail} className={selected.tail === row.tail ? "selected-row" : ""} onClick={() => setSelected(row)}>
+                  <tr key={row.tail} className={selected.tail === row.tail ? "selected-row" : ""} onClick={() => navigate(ROUTES.aircraftRecord(row.tail))}>
                     <td className="check-cell"><input type="checkbox" onClick={e => e.stopPropagation()} /></td>
                     <td><div className="tail-cell"><span className={`aircraft-dot ${row.dot}`} /> <strong>{row.tail}</strong></div></td>
                     <td>{row.type}</td>
