@@ -45,7 +45,7 @@ import {
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 
-const aircraftImage = "/manus-storage/wingbox-aircraft-hero_f855b674.jpg";
+const aircraftImage = "/assets/wingbox-aircraft-hero.jpg";
 
 const navGroups = [
   { label: "", items: [{ label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" }] },
