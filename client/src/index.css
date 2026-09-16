@@ -131,3 +131,53 @@ h1 { font-family:'Space Grotesk'; font-size:25px; line-height:1.05; letter-spaci
 @media (max-width:1050px) { .overview-tab { grid-template-columns:1fr; }.aircraft-record-rail { grid-template-columns:1fr 1fr; } }
 @media (max-width:600px) { .aircraft-record-header { flex-wrap:wrap; gap:12px; }.aircraft-record-header>img { width:90px; height:65px; }.aircraft-record-identity h1 { font-size:24px; }.aircraft-record-identity>div { gap:8px; }.aircraft-record-identity p { font-size:10px; }.aircraft-record-header>.aircraft-record-back { margin-left:0; }.aircraft-record-information,.aircraft-record-rail { grid-template-columns:1fr; }.aircraft-record-tabs [data-slot="tabs-trigger"] { padding:12px 16px; }.aircraft-record-section-heading { align-items:flex-start; }.aircraft-record-section-heading h2 small { display:block; margin:4px 0 0; } }
 @media (prefers-reduced-motion:reduce) { .aircraft-record-progress [data-slot="progress-indicator"],.aircraft-record-back:after { transition:none; } }
+
+/* === INSPECTIONS PAGE === */
+.inspection-snapshot { color:var(--muted); font-size:10px; margin:-7px 0 15px; }
+.inspections-layout { display:grid; grid-template-columns:minmax(0,1fr) 280px; gap:17px; align-items:start; }
+.inspections-main { min-width:0; }
+.inspections-page .stats-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:16px; }
+.inspections-page .stat-card { padding:15px 11px; gap:9px; }
+.inspections-page .stat-copy span { line-height:1.4; }
+.inspections-rail { display:flex; flex-direction:column; gap:14px; }
+.inspections-rail .featured-card { height:145px; }
+.inspection-record-link { display:flex; justify-content:center; align-items:center; gap:10px; margin-top:12px; padding:9px; background:var(--blue); color:var(--card); border-radius:4px; font-size:10px; }
+.inspections-table { overflow:hidden; }
+.inspections-table table { min-width:760px; }
+.inspections-table td { height:61px; }
+.inspections-table .filter-row { flex-wrap:wrap; }
+.inspections-table .table-search { flex:1; min-width:200px; }
+.inspections-table tbody tr { background:var(--card); }
+.inspections-table tbody tr.selected-row { background:var(--sky); }
+.inspection-aircraft { text-align:left; color:var(--navy-2); cursor:pointer; }
+.inspection-aircraft:focus-visible,.inspections-page button:focus-visible,.inspections-page a:focus-visible { outline:2px solid var(--blue); outline-offset:3px; }
+.inspection-inspector { display:flex; align-items:center; gap:7px; }
+.inspection-avatar { width:26px; height:26px; display:grid; place-items:center; border-radius:50%; background:var(--navy-2); color:var(--card); font-size:9px; flex-shrink:0; }
+.inspection-blue { --inspection-tone:var(--blue); }
+.inspection-amber { --inspection-tone:var(--amber); }
+.inspection-green { --inspection-tone:var(--green); }
+.inspection-red { --inspection-tone:var(--red); }
+.inspection-status { display:inline-flex; padding:4px 7px; border-radius:20px; font-size:9px; background:color-mix(in srgb,var(--inspection-tone) 12%,var(--card)); }
+.inspection-progress { display:flex; align-items:center; gap:8px; min-width:120px; }
+.inspection-progress [data-slot="progress"] { width:64px; height:5px; background:var(--line); }
+.inspection-progress [data-slot="progress-indicator"] { background:var(--inspection-tone); }
+.inspection-progress>span { color:var(--muted); font-size:9px; }
+.inspection-table-footer { display:flex; align-items:center; justify-content:space-between; padding:14px; color:var(--muted); font-size:10px; }
+.inspection-table-footer button { color:var(--blue); cursor:pointer; }
+.inspection-calendar { overflow:hidden; }
+.inspection-calendar-heading { display:flex; justify-content:space-between; align-items:center; font-size:11px; margin:16px 0; color:var(--navy-2); }
+.inspection-calendar-heading>div { display:flex; gap:7px; }
+.inspection-calendar-heading button { cursor:pointer; display:grid; place-items:center; width:24px; height:24px; border-radius:4px; }
+.inspection-calendar-heading button:hover { background:var(--sky); }
+.inspection-weekdays,.inspection-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); text-align:center; }
+.inspection-weekdays { font-size:8px; color:var(--muted); margin-bottom:7px; }
+.calendar-day { height:33px; width:30px; max-width:100%; margin:auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:9px; border:1px solid transparent; border-radius:6px; color:var(--ink); }
+.calendar-day:has(.calendar-markers i) { background:var(--sky); }
+.calendar-day.calendar-today { border-color:var(--blue); }
+.calendar-markers { display:flex; gap:2px; min-height:4px; }
+.calendar-markers i,.inspection-calendar-legend i { width:4px; height:4px; border-radius:50%; background:var(--inspection-tone); display:inline-block; }
+.inspection-calendar-legend { display:flex; flex-wrap:wrap; gap:8px 12px; margin-top:12px; padding-top:10px; border-top:1px solid var(--line); font-size:8px; color:var(--muted); }
+.inspection-calendar-legend span { display:flex; gap:4px; align-items:center; }
+@media (max-width:1200px) { .inspections-layout { grid-template-columns:minmax(0,1fr) 260px; }.inspections-page .stat-card { flex-direction:column; }.inspections-page .stat-copy span { min-height:28px; } }
+@media (max-width:1000px) { .inspections-layout { grid-template-columns:1fr; }.inspections-rail { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }.inspections-page .stat-card { flex-direction:row; } }
+@media (max-width:700px) { .inspections-rail { grid-template-columns:1fr; }.inspections-page .stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.inspections-page .stats-grid .stat-card:last-child { grid-column:auto; }.inspections-page .stat-copy span { min-height:0; }.inspections-rail .featured-card { height:190px; }.calendar-day { width:100%; height:38px; } }
