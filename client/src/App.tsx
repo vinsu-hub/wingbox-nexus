@@ -124,19 +124,20 @@ const aircraft = [
 ];
 
 function BrandMark() {
-  return <div className="brand-mark"><div className="brand-square"><span /></div><div><strong>WINGBOX</strong><small>AVIATION INC.</small></div><i /> <b>NEXUS</b></div>;
+  return <div className="brand-mark"><div className="brand-square"><span /></div><div><strong>WINGBOX</strong><small>AVIATION INC.</small></div></div>;
 }
 
 function Layout({ children }: { children: React.ReactNode }) {
   const [location, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const handleNav = (label: string, path?: string) => {
     if (path) navigate(path);
     else toast(`${label} workspace is coming soon`);
     setMobileOpen(false);
   };
-  return <div className="app-shell">
+  return <div className={`app-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
     <aside className={`sidebar ${mobileOpen ? "mobile-open" : ""}`}>
       <div className="sidebar-brand"><BrandMark /></div>
       <nav className="side-nav">
@@ -149,7 +150,8 @@ function Layout({ children }: { children: React.ReactNode }) {
     </aside>
     <main className="main-shell">
       <header className="topbar">
-        <button className="mobile-menu" onClick={() => setMobileOpen(v => !v)}><Menu size={20}/></button>
+        <button className="mobile-menu" onClick={() => setMobileOpen(v => !v)} aria-label="Open navigation"><Menu size={20}/></button>
+        <button className="collapse-menu" onClick={() => setCollapsed(v => !v)} aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}>{collapsed ? <ChevronRight size={17}/> : <ChevronLeft size={17}/>}</button>
         <div className="top-search"><Search size={16}/><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search aircraft, tail number, component, finding, document..."/><kbd>⌘ K</kbd></div>
         <div className="top-actions"><button className="icon-button" onClick={() => toast("You are all caught up") }><Bell size={18}/><em>3</em></button><div className="user-chip"><div className="avatar">JD</div><div><strong>John Dela Cruz</strong><span>Engineer</span></div><ChevronDown size={15}/></div></div>
       </header>
@@ -198,8 +200,8 @@ function DashboardPage() {
 
 function LoginPage() {
   const [, navigate] = useLocation(); const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
-  return <div className="login-page"><div className="login-photo"/><div className="login-stripes"/><div className="login-card"><BrandMark/><div className="login-rule"/><h1><span>WingBox</span> <b>Nexus</b></h1><p>Moving Toward Excellence — Digitally.</p><label>Email address<div className="input-icon"><UserRound size={16}/><input value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your work email"/></div></label><label>Password<div className="input-icon"><LockKeyhole size={16}/><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password"/></div></label><button className="forgot" onClick={() => toast("Password reset link requested")}>Forgot password?</button><button className="primary-button login-button" onClick={() => navigate("/dashboard")}>Sign in <ArrowRight size={16}/></button><div className="or"><span/>or<span/></div><button className="role-login" onClick={() => navigate("/dashboard")}><UserRound size={17}/> Engineer / Client / Admin login</button></div></div>;
+  return <div className="login-page"><div className="login-photo"/><div className="login-stripes"/><div className="login-card"><BrandMark/><div className="login-rule"/><h1><span>WingBox</span> <b>Aviation</b></h1><p>Moving Toward Excellence — Digitally.</p><label>Email address<div className="input-icon"><UserRound size={16}/><input value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your work email"/></div></label><label>Password<div className="input-icon"><LockKeyhole size={16}/><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password"/></div></label><button className="forgot" onClick={() => toast("Password reset link requested")}>Forgot password?</button><button className="primary-button login-button" onClick={() => navigate("/dashboard")}>Sign in <ArrowRight size={16}/></button><div className="or"><span/>or<span/></div><button className="role-login" onClick={() => navigate("/dashboard")}><UserRound size={17}/> Engineer / Client / Admin login</button></div></div>;
 }
 
-function App() { return <><Toaster position="bottom-right"/><Switch><Route path="/login" component={LoginPage}/><Route path="/" component={() => <Layout><FleetPage/></Layout>}/><Route path="/fleet" component={() => <Layout><FleetPage/></Layout>}/><Route path="/dashboard" component={() => <Layout><DashboardPage/></Layout>}/><Route component={() => <Layout><FleetPage/></Layout>}/></Switch></>; }
+function App() { return <><Toaster position="bottom-right"/><Switch><Route path="/login" component={LoginPage}/><Route path="/" component={LoginPage}/><Route path="/fleet" component={() => <Layout><FleetPage/></Layout>}/><Route path="/dashboard" component={() => <Layout><DashboardPage/></Layout>}/><Route component={LoginPage}/></Switch></>; }
 export default App;
