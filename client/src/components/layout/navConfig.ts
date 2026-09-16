@@ -75,7 +75,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "PROCUREMENT",
     items: [
-      item("Parts Requests", Wrench),
+      item("Parts Requests", Wrench, ROUTES.partsRequests),
       item("QA/QC", ListChecks),
     ],
   },

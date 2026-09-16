@@ -10,6 +10,7 @@ import { InspectionsPage } from "@/pages/Inspections/InspectionsPage";
 import { ComplianceView } from "@/pages/Compliance/ComplianceView";
 import { LifeTrackingView } from "@/pages/LifeTracking/LifeTrackingView";
 import { ReportsPage } from "@/pages/Reports/ReportsPage";
+import { PartsRequestsPage } from "@/pages/PartsRequests/PartsRequestsPage";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Route path="/compliance" component={() => <Layout><ComplianceView /></Layout>} />
         <Route path="/life-tracking" component={() => <Layout><LifeTrackingView /></Layout>} />
         <Route path="/reports" component={() => <Layout><ReportsPage /></Layout>} />
+        <Route path="/parts-requests" component={() => <Layout><PartsRequestsPage /></Layout>} />
         <Route path="/view/:slug">{params => <Layout><MissingView slug={params.slug} /></Layout>}</Route>
         <Route component={LoginPage} />
       </Switch>
