@@ -7,6 +7,7 @@ export const ROUTES = {
   inspections: "/inspections",
   compliance: "/compliance",
   lifeTracking: "/life-tracking",
+  reports: "/reports",
   view: (slug: string) => `/view/${slug}`,
 } as const;
 

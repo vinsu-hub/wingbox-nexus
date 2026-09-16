@@ -68,7 +68,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "REPORTS",
     items: [
-      item("Reports", FileBarChart),
+      item("Reports", FileBarChart, ROUTES.reports),
       item("Presentations", FileCheck2),
     ],
   },
