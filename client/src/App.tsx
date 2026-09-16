@@ -5,6 +5,10 @@ import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { FleetPage } from "@/pages/FleetPage";
 import { MissingView } from "@/pages/MissingView";
+import { AircraftRecordPage } from "@/pages/AircraftRecord/AircraftRecordPage";
+import { InspectionsPage } from "@/pages/Inspections/InspectionsPage";
+import { ComplianceView } from "@/pages/Compliance/ComplianceView";
+import { LifeTrackingView } from "@/pages/LifeTracking/LifeTrackingView";
 
 function App() {
   return (
@@ -14,7 +18,11 @@ function App() {
         <Route path="/login" component={LoginPage} />
         <Route path="/" component={LoginPage} />
         <Route path="/fleet" component={() => <Layout><FleetPage /></Layout>} />
+        <Route path="/fleet/:tail" component={() => <Layout><AircraftRecordPage /></Layout>} />
         <Route path="/dashboard" component={() => <Layout><DashboardPage /></Layout>} />
+        <Route path="/inspections" component={() => <Layout><InspectionsPage /></Layout>} />
+        <Route path="/compliance" component={() => <Layout><ComplianceView /></Layout>} />
+        <Route path="/life-tracking" component={() => <Layout><LifeTrackingView /></Layout>} />
         <Route path="/view/:slug">{params => <Layout><MissingView slug={params.slug} /></Layout>}</Route>
         <Route component={LoginPage} />
       </Switch>

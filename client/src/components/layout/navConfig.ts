@@ -44,15 +44,15 @@ export const navGroups: NavGroup[] = [
       item("Fleet", Plane, ROUTES.fleet),
       item("Components", Box),
       item("Maintenance History", History),
-      item("Compliance", ShieldCheck),
-      item("Life Tracking", Activity),
+      item("Compliance", ShieldCheck, ROUTES.compliance),
+      item("Life Tracking", Activity, ROUTES.lifeTracking),
       item("Documents", FileText),
     ],
   },
   {
     label: "INSPECTIONS",
     items: [
-      item("Inspections", ClipboardCheck),
+      item("Inspections", ClipboardCheck, ROUTES.inspections),
       item("Findings", AlertTriangle),
       item("Damage / 3D", Box),
     ],

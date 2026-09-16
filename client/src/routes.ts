@@ -4,6 +4,9 @@ export const ROUTES = {
   dashboard: "/dashboard",
   fleet: "/fleet",
   aircraftRecord: (tail: string) => `/fleet/${tail}`,
+  inspections: "/inspections",
+  compliance: "/compliance",
+  lifeTracking: "/life-tracking",
   view: (slug: string) => `/view/${slug}`,
 } as const;
 
