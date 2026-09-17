@@ -4,8 +4,16 @@ import { randomUUID } from "crypto";
 import { supabase, MODELS_BUCKET, MODELS_TABLE } from "../lib/supabase.js";
 import { auditGltf } from "../lib/gltfAudit.js";
 import { compressGlb, COMPRESSION_THRESHOLD_BYTES } from "../lib/compressGlb.js";
+import { assembleStlParts } from "../lib/stlAssembly.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
+// Multi-part STL assembly intentionally allows much larger uploads than the
+// single-file .glb path — a real disassembled-parts kit runs into hundreds
+// of MB across dozens of files (see the plan's file-by-file size accounting).
+const uploadLargeParts = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 200 * 1024 * 1024, files: 64 },
+});
 
 export const modelsRouter = Router();
 
@@ -125,6 +133,86 @@ modelsRouter.get("/latest", async (_req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Unknown lookup error" });
+  }
+});
+
+/** Combines multiple binary-STL parts (a disassembled-model kit) into one
+ * .glb with a genuinely flat, separable node hierarchy — unlike a typical
+ * finished single-mesh/FBX-sourced .glb, this gives Exploded View real,
+ * distinct parts to pull apart. Not exposed in the Import modal UI (V1
+ * scope stays single-file glTF for end users); this is a backend path for
+ * setting up a curated default model. */
+modelsRouter.post("/ingest-parts", uploadLargeParts.array("files"), async (req, res) => {
+  try {
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (files.length === 0) {
+      res.status(400).json({ error: "Provide one or more multipart 'files' (.stl)." });
+      return;
+    }
+    const nonStl = files.find(file => extensionOf(file.originalname) !== ".stl");
+    if (nonStl) {
+      res.status(400).json({ error: `Unsupported format for "${nonStl.originalname}". Only .stl parts are accepted here.` });
+      return;
+    }
+
+    const parts = files.map(file => ({
+      name: file.originalname.replace(/\.stl$/i, ""),
+      buffer: file.buffer,
+    }));
+    const assembled = await assembleStlParts(parts);
+
+    let glbBuffer = assembled.glb;
+    if (glbBuffer.byteLength > COMPRESSION_THRESHOLD_BYTES) {
+      glbBuffer = await compressGlb(glbBuffer);
+    }
+
+    const storagePath = `${randomUUID()}.glb`;
+    const { error: uploadError } = await supabase.storage
+      .from(MODELS_BUCKET)
+      .upload(storagePath, glbBuffer, { contentType: "model/gltf-binary" });
+    if (uploadError) {
+      res.status(502).json({ error: `Storage upload failed: ${uploadError.message}` });
+      return;
+    }
+
+    const { data: signed, error: signError } = await supabase.storage
+      .from(MODELS_BUCKET)
+      .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+    if (signError || !signed) {
+      res.status(502).json({ error: `Could not create a fetchable URL: ${signError?.message}` });
+      return;
+    }
+
+    const licenseNote = typeof req.body.licenseNote === "string" ? req.body.licenseNote : "";
+    const { data: row, error: insertError } = await supabase
+      .from(MODELS_TABLE)
+      .insert({
+        file_url: storagePath,
+        source: "upload",
+        license_note: licenseNote || null,
+        node_count: assembled.nodeCount,
+        triangle_count: assembled.triangleCount,
+        is_separable: true,
+        linked_component_id: req.body.linkedComponentId ?? null,
+        linked_finding_id: req.body.linkedFindingId ?? null,
+      })
+      .select()
+      .single();
+    if (insertError) {
+      res.status(502).json({ error: `Metadata insert failed: ${insertError.message}` });
+      return;
+    }
+
+    res.status(201).json({
+      id: row.id,
+      url: signed.signedUrl,
+      nodeCount: assembled.nodeCount,
+      triangleCount: assembled.triangleCount,
+      isSeparable: true,
+      partCount: parts.length,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown assembly error" });
   }
 });
 

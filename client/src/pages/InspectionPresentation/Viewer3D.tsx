@@ -60,7 +60,11 @@ function useModeEffects(scene: THREE.Object3D, mode: ViewerMode, explodeFactor =
 
 function GltfModel({ url, mode }: { url: string; mode: ViewerMode }) {
   const { scene } = useGLTF(url, true);
-  useModeEffects(scene, mode);
+  // A real multi-part kit's largest components dominate the scene's bounding
+  // box, so a part sitting near the shared center gets a proportionally tiny
+  // center-relative offset at the default factor — bump it here so parts of
+  // any size pull apart clearly instead of only the outermost ones moving.
+  useModeEffects(scene, mode, 2.6);
   return <primitive object={scene} />;
 }
 
