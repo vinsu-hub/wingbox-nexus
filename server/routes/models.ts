@@ -90,6 +90,44 @@ async function ingest(input: IngestInput, res: import("express").Response) {
   });
 }
 
+/** Returns the most recently ingested model with a freshly-signed URL. Signed
+ * URLs expire (7 days, set at ingest time) so the frontend must re-fetch this
+ * on load rather than caching the URL returned at ingest time indefinitely. */
+modelsRouter.get("/latest", async (_req, res) => {
+  try {
+    const { data: row, error } = await supabase
+      .from(MODELS_TABLE)
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      res.status(502).json({ error: `Lookup failed: ${error.message}` });
+      return;
+    }
+    if (!row) {
+      res.status(404).json({ error: "No models have been ingested yet." });
+      return;
+    }
+    const { data: signed, error: signError } = await supabase.storage
+      .from(MODELS_BUCKET)
+      .createSignedUrl(row.file_url, 60 * 60 * 24 * 7);
+    if (signError || !signed) {
+      res.status(502).json({ error: `Could not sign a fetchable URL: ${signError?.message}` });
+      return;
+    }
+    res.json({
+      id: row.id,
+      url: signed.signedUrl,
+      nodeCount: row.node_count,
+      triangleCount: row.triangle_count,
+      isSeparable: row.is_separable,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown lookup error" });
+  }
+});
+
 modelsRouter.post("/ingest", upload.single("file"), async (req, res) => {
   try {
     if (req.file) {

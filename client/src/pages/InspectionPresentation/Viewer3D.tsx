@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Center, OrbitControls, useGLTF } from "@react-three/drei";
+import { Bounds, Center, OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type OrbitControlsImpl = any;
@@ -156,9 +156,16 @@ export function Viewer3D({
       <directionalLight position={[5, 8, 5]} intensity={1.1} />
       <directionalLight position={[-5, -3, -5]} intensity={0.35} />
       <Suspense fallback={null}>
-        <Center>
-          {modelUrl ? <GltfModel url={modelUrl} mode={mode} /> : <ProceduralEngine mode={mode} />}
-        </Center>
+        {/* Real-world source models arrive at wildly different scales (this
+         * project has already hit one authored in ~10-unit-wide CAD/FBX
+         * export units, versus small ~1-2 unit test assets) — Bounds fits
+         * the camera to whatever actually loaded instead of assuming a
+         * fixed scale, and re-fits whenever the model swaps (observe). */}
+        <Bounds fit clip observe margin={1.3} key={modelUrl ?? "placeholder"}>
+          <Center>
+            {modelUrl ? <GltfModel url={modelUrl} mode={mode} /> : <ProceduralEngine mode={mode} />}
+          </Center>
+        </Bounds>
       </Suspense>
       <OrbitControls ref={controlsRef} enableDamping makeDefault />
     </Canvas>

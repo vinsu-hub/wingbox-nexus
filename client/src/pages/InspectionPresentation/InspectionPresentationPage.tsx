@@ -30,6 +30,22 @@ export function InspectionPresentationPage() {
   const notify = (label: string) => toast.info(`${label} is a presentation preview.`, { description: "This static P1 slice does not save or alter inspection records." });
 
   useEffect(() => {
+    let cancelled = false;
+    fetch("/api/models/latest")
+      .then(response => (response.ok ? response.json() : null))
+      .then((result: IngestResult | null) => {
+        if (result && !cancelled) setModel(result);
+      })
+      .catch(() => {
+        /* no persisted model yet, or the fetch failed — the procedural
+         * placeholder engine in Viewer3D covers this case, nothing to show. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (controlsRef.current) controlsRef.current.autoRotate = autoRotate;
   }, [autoRotate, model]);
 
