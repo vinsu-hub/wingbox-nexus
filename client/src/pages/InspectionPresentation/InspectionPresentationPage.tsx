@@ -107,7 +107,7 @@ export function InspectionPresentationPage() {
       <div className="inspection-presentation-layout">
         <section className="presentation-viewer" aria-label="3D model viewer">
           <div ref={viewerContainerRef} className="viewer-canvas viewer-live">
-            <Viewer3D modelUrl={model?.url ?? null} mode={viewerMode} controlsRef={controlsRef} />
+            <Viewer3D modelUrl={model?.url ?? null} mode={viewerMode} controlsRef={controlsRef} activeView={selectedThumbnail} />
             <div className="component-identity"><Box size={14} /><span>{inspectionMeta.componentLabel}</span></div>
             <div className="compass-widget" aria-label="Decorative compass"><Compass size={25} /><b>N</b></div>
             <div className="viewer-tools" aria-label="Viewer tools">{viewerTools.map(({ label, icon: Icon, action }) => <button key={label} aria-label={label} title={label} onClick={action}><Icon size={16} /></button>)}</div>

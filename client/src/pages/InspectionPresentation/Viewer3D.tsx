@@ -1,11 +1,74 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bounds, Center, OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type OrbitControlsImpl = any;
 
 export type ViewerMode = "3D View" | "Exploded View" | "Wireframe";
+
+/** Wireframe on a dense real-world mesh (millions of triangles, fused
+ * together) renders as an unreadable solid blob — the overlapping lines
+ * merge into a flat fill at any normal zoom. Explode the parts whenever
+ * Wireframe is active too, so there's actual separation between surfaces
+ * for the wireframe lines to read against. */
+function isExploded(mode: ViewerMode) {
+  return mode === "Exploded View" || mode === "Wireframe";
+}
+
+/** The 5 inspection-media filmstrip buttons (Inspection detail, Engine
+ * inlet, Left angle, Right angle, Lower cowl) used to be purely cosmetic —
+ * clicking them never changed the 3D view. These presets give each one a
+ * distinct, real camera angle around the model so they're actually
+ * consistent with what the viewer shows. Angles are spherical offsets
+ * (theta = azimuth, phi = polar from +Y) applied at the camera's current
+ * distance from the orbit target, so zoom level is preserved. */
+const CAMERA_PRESETS: { theta: number; phi: number }[] = [
+  { theta: 0, phi: Math.PI / 2.3 },           // Inspection detail — default front-ish framing
+  { theta: Math.PI, phi: Math.PI / 2.3 },     // Engine inlet — opposite face
+  { theta: -Math.PI / 2.4, phi: Math.PI / 2.3 }, // Left angle
+  { theta: Math.PI / 2.4, phi: Math.PI / 2.3 },  // Right angle
+  { theta: 0, phi: (2 * Math.PI) / 3 },       // Lower cowl — camera dips below, looking up
+];
+
+/** Smoothly orbits the camera to a preset angle whenever `presetIndex`
+ * changes, preserving the user's current zoom distance. Lives inside the
+ * Canvas (needs useThree/useFrame) and reads/writes the same OrbitControls
+ * instance the parent page's toolbar (zoom, pan, rotate) already drives. */
+function CameraPresetController({ presetIndex, controlsRef }: { presetIndex: number; controlsRef: React.MutableRefObject<OrbitControlsImpl> }) {
+  const { camera } = useThree();
+  const target = useRef<THREE.Spherical | null>(null);
+  const prevIndex = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (prevIndex.current === presetIndex) return;
+    prevIndex.current = presetIndex;
+    const controls = controlsRef.current;
+    if (!controls) return;
+    const currentOffset = camera.position.clone().sub(controls.target);
+    const currentSpherical = new THREE.Spherical().setFromVector3(currentOffset);
+    const preset = CAMERA_PRESETS[presetIndex] ?? CAMERA_PRESETS[0];
+    target.current = new THREE.Spherical(currentSpherical.radius, preset.phi, preset.theta);
+  }, [presetIndex, camera, controlsRef]);
+
+  useFrame(() => {
+    const controls = controlsRef.current;
+    const goal = target.current;
+    if (!controls || !goal) return;
+    const currentOffset = camera.position.clone().sub(controls.target);
+    const current = new THREE.Spherical().setFromVector3(currentOffset);
+    current.phi += (goal.phi - current.phi) * 0.08;
+    current.theta += (goal.theta - current.theta) * 0.08;
+    current.radius = goal.radius;
+    camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(current));
+    controls.update();
+    if (Math.abs(goal.phi - current.phi) < 0.002 && Math.abs(goal.theta - current.theta) < 0.002) {
+      target.current = null;
+    }
+  });
+
+  return null;
+}
 
 /** Shared wireframe-swap + explode-on-toggle behavior for any loaded/built
  * THREE.Group, so a real glTF model and the procedural fallback engine both
@@ -48,7 +111,7 @@ function useModeEffects(scene: THREE.Object3D, mode: ViewerMode, explodeFactor =
   }, [scene]);
 
   useFrame(() => {
-    const exploded = mode === "Exploded View";
+    const exploded = isExploded(mode);
     scene.children.forEach(child => {
       const original = originalPositions.current.get(child);
       if (!original) return;
@@ -149,10 +212,14 @@ export function Viewer3D({
   modelUrl,
   mode,
   controlsRef,
+  activeView = 0,
 }: {
   modelUrl: string | null;
   mode: ViewerMode;
   controlsRef: React.MutableRefObject<OrbitControlsImpl>;
+  /** Index into the 5 filmstrip presets (Inspection detail, Engine inlet,
+   * Left angle, Right angle, Lower cowl) — orbits the camera to match. */
+  activeView?: number;
 }) {
   return (
     <Canvas camera={{ position: [3, 2, 4.5], fov: 45 }} dpr={[1, 2]}>
@@ -164,13 +231,18 @@ export function Viewer3D({
          * project has already hit one authored in ~10-unit-wide CAD/FBX
          * export units, versus small ~1-2 unit test assets) — Bounds fits
          * the camera to whatever actually loaded instead of assuming a
-         * fixed scale, and re-fits whenever the model swaps (observe). */}
-        <Bounds fit clip observe margin={1.3} key={modelUrl ?? "placeholder"}>
+         * fixed scale, and re-fits whenever the model swaps (observe).
+         * Margin is generous (not just tight-fit + a hair of padding)
+         * because Exploded/Wireframe push parts well past the model's
+         * resting-pose bounds — observe keeps refitting as they animate
+         * outward, but a small margin still let them crowd the frame edge. */}
+        <Bounds fit clip observe margin={1.8} key={modelUrl ?? "placeholder"}>
           <Center>
             {modelUrl ? <GltfModel url={modelUrl} mode={mode} /> : <ProceduralEngine mode={mode} />}
           </Center>
         </Bounds>
       </Suspense>
+      <CameraPresetController presetIndex={activeView} controlsRef={controlsRef} />
       <OrbitControls ref={controlsRef} enableDamping makeDefault />
     </Canvas>
   );
