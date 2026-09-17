@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Viewer3D, type ViewerMode } from "./Viewer3D";
 import { ImportModelModal, type IngestResult } from "./ImportModelModal";
 
-const hotspotPositions: Record<string, { left: string; top: string }> = { "F-01": { left: "59%", top: "46%" }, "F-02": { left: "53%", top: "54%" }, "F-03": { left: "66%", top: "65%" } };
 const thumbnails = ["Inspection detail", "Engine inlet", "Left angle", "Right angle", "Lower cowl"];
 const tabs = ["Findings", "Photos", "3D Model", "Documents", "Details"];
 
@@ -48,12 +47,6 @@ export function InspectionPresentationPage() {
     controls.update();
   };
 
-  const resetView = () => {
-    controlsRef.current?.reset();
-    setAutoRotate(false);
-    setPanMode(false);
-  };
-
   const toggleFullscreen = () => {
     const el = viewerContainerRef.current;
     if (!el) return;
@@ -61,21 +54,13 @@ export function InspectionPresentationPage() {
     else void el.requestFullscreen();
   };
 
-  const viewerTools = model
-    ? [
-        { label: autoRotate ? "Stop rotation" : "Rotate model", icon: Rotate3D, action: () => setAutoRotate(v => !v) },
-        { label: "Zoom in", icon: ZoomIn, action: () => zoom(0.8) },
-        { label: "Zoom out", icon: Minus, action: () => zoom(1.25) },
-        { label: "Fullscreen viewer", icon: Maximize2, action: toggleFullscreen },
-        { label: panMode ? "Switch to rotate" : "Pan model", icon: Hand, action: () => setPanMode(v => !v) },
-      ]
-    : [
-        { label: "Rotate model", icon: Rotate3D, action: () => notify("Rotate model") },
-        { label: "Zoom in", icon: ZoomIn, action: () => notify("Zoom in") },
-        { label: "Zoom out", icon: Minus, action: () => notify("Zoom out") },
-        { label: "Fullscreen viewer", icon: Maximize2, action: toggleFullscreen },
-        { label: "Pan model", icon: Hand, action: () => notify("Pan model") },
-      ];
+  const viewerTools = [
+    { label: autoRotate ? "Stop rotation" : "Rotate model", icon: Rotate3D, action: () => setAutoRotate(v => !v) },
+    { label: "Zoom in", icon: ZoomIn, action: () => zoom(0.8) },
+    { label: "Zoom out", icon: Minus, action: () => zoom(1.25) },
+    { label: "Fullscreen viewer", icon: Maximize2, action: toggleFullscreen },
+    { label: panMode ? "Switch to rotate" : "Pan model", icon: Hand, action: () => setPanMode(v => !v) },
+  ];
 
   const explodedDisabled = model != null && !model.isSeparable;
 
@@ -104,20 +89,12 @@ export function InspectionPresentationPage() {
         </div>
       </header>
       <div className="inspection-presentation-layout">
-        <section className="presentation-viewer" aria-label={model ? "3D model viewer" : "Static engine finding viewer"}>
-          <div ref={viewerContainerRef} className={`viewer-canvas ${model ? "viewer-live" : `viewer-mode-${viewerMode.toLowerCase().replaceAll(" ", "-")}`}`}>
-            {model ? (
-              <Viewer3D modelUrl={model.url} mode={viewerMode} controlsRef={controlsRef} />
-            ) : (
-              <img src="/assets/wingbox-aircraft-hero.jpg" alt="Aircraft engine inspection view" />
-            )}
-            {!model && <div className="viewer-shade" />}
+        <section className="presentation-viewer" aria-label="3D model viewer">
+          <div ref={viewerContainerRef} className="viewer-canvas viewer-live">
+            <Viewer3D modelUrl={model?.url ?? null} mode={viewerMode} controlsRef={controlsRef} />
             <div className="component-identity"><Box size={14} /><span>{inspectionMeta.componentLabel}</span></div>
             <div className="compass-widget" aria-label="Decorative compass"><Compass size={25} /><b>N</b></div>
             <div className="viewer-tools" aria-label="Viewer tools">{viewerTools.map(({ label, icon: Icon, action }) => <button key={label} aria-label={label} title={label} onClick={action}><Icon size={16} /></button>)}</div>
-            {!model && (
-              <motion.button className={`finding-hotspot hotspot-${selectedFinding.severity.toLowerCase()}`} aria-label={`Finding ${selectedFinding.id}: ${selectedFinding.title}`} animate={hotspotPositions[selectedFinding.id]} transition={{ type: "spring", stiffness: 230, damping: 25 }} onClick={() => notify(`Finding ${selectedFinding.id}`)}><b>{selectedFinding.id.replace("F-", "#")}</b><span>{selectedFinding.title}</span></motion.button>
-            )}
             <div className="viewer-mode-toggle" aria-label="Viewer mode">
               {(["3D View", "Exploded View", "Wireframe"] as ViewerMode[]).map(mode => (
                 <button
@@ -129,7 +106,7 @@ export function InspectionPresentationPage() {
                 >{mode}</button>
               ))}
             </div>
-            <div className="viewer-caption"><MousePointer2 size={12} /> {model ? `Live 3D viewer · ${panMode ? "pan" : "rotate"} + scroll to zoom` : "Static presentation preview — Import a model for the live viewer"}</div>
+            <div className="viewer-caption"><MousePointer2 size={12} /> {model ? `Live 3D viewer · ${panMode ? "pan" : "rotate"} + scroll to zoom` : `Reference engine model · ${panMode ? "pan" : "rotate"} + scroll to zoom — Import your own to replace it`}</div>
           </div>
           <div className="viewer-filmstrip" aria-label="Inspection media thumbnails">{thumbnails.map((label, index) => <motion.button key={label} className={selectedThumbnail === index ? "selected" : ""} onClick={() => setSelectedThumbnail(index)} aria-label={`View ${label}`} whileHover={{ y: -2 }}><img src="/assets/wingbox-aircraft-hero.jpg" alt="" style={{ objectPosition: `${35 + index * 12}% center` }} /><span>{index === 0 ? <FileText size={13} /> : `${index + 1}`}</span></motion.button>)}</div>
         </section>

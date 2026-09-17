@@ -7,8 +7,10 @@ type OrbitControlsImpl = any;
 
 export type ViewerMode = "3D View" | "Exploded View" | "Wireframe";
 
-function Model({ url, mode }: { url: string; mode: ViewerMode }) {
-  const { scene } = useGLTF(url, true);
+/** Shared wireframe-swap + explode-on-toggle behavior for any loaded/built
+ * THREE.Group, so a real glTF model and the procedural fallback engine both
+ * get identical Wireframe/Exploded View behavior from one place. */
+function useModeEffects(scene: THREE.Object3D, mode: ViewerMode, explodeFactor = 1.6) {
   const originalMaterials = useRef(new Map<THREE.Mesh, THREE.Material | THREE.Material[]>());
   const originalPositions = useRef(new Map<THREE.Object3D, THREE.Vector3>());
 
@@ -50,12 +52,86 @@ function Model({ url, mode }: { url: string; mode: ViewerMode }) {
     scene.children.forEach(child => {
       const original = originalPositions.current.get(child);
       if (!original) return;
-      const offset = original.clone().sub(center).multiplyScalar(exploded ? 1.6 : 0);
+      const offset = original.clone().sub(center).multiplyScalar(exploded ? explodeFactor : 0);
       child.position.lerp(original.clone().add(offset), 0.12);
     });
   });
+}
 
+function GltfModel({ url, mode }: { url: string; mode: ViewerMode }) {
+  const { scene } = useGLTF(url, true);
+  useModeEffects(scene, mode);
   return <primitive object={scene} />;
+}
+
+const ENGINE_METAL = 0x8a94a3;
+const ENGINE_METAL_DARK = 0x4b5566;
+const ENGINE_ACCENT = 0x1d74dc;
+
+/** No real model has been imported yet — build a simple, clearly-separable
+ * turbofan-engine shape from primitives (core, nacelle, inlet, exhaust, 8
+ * fan blades) instead of falling back to a flat photo. Zero licensing risk
+ * (nothing downloaded), and genuinely separable so Exploded View has
+ * something real to demonstrate before the user imports their own model. */
+function ProceduralEngine({ mode }: { mode: ViewerMode }) {
+  const group = useMemo(() => {
+    const root = new THREE.Group();
+    root.name = "engine-placeholder";
+
+    const metal = new THREE.MeshStandardMaterial({ color: ENGINE_METAL, metalness: 0.75, roughness: 0.35 });
+    const metalDark = new THREE.MeshStandardMaterial({ color: ENGINE_METAL_DARK, metalness: 0.6, roughness: 0.45 });
+    const accent = new THREE.MeshStandardMaterial({ color: ENGINE_ACCENT, metalness: 0.4, roughness: 0.3 });
+
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.6, 2.6, 32), metalDark);
+    core.name = "engine-core";
+    core.rotation.z = Math.PI / 2;
+    root.add(core);
+
+    const nacelle = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 2.2, 40, 1, true), metal);
+    nacelle.name = "nacelle";
+    nacelle.rotation.z = Math.PI / 2;
+    nacelle.material.side = THREE.DoubleSide;
+    root.add(nacelle);
+
+    const inlet = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.08, 12, 40), accent);
+    inlet.name = "inlet-ring";
+    inlet.rotation.y = Math.PI / 2;
+    inlet.position.x = -1.15;
+    root.add(inlet);
+
+    const exhaust = new THREE.Mesh(new THREE.ConeGeometry(0.85, 1.1, 32, 1, true), metalDark);
+    exhaust.name = "exhaust-cone";
+    exhaust.material.side = THREE.DoubleSide;
+    exhaust.rotation.z = -Math.PI / 2;
+    exhaust.position.x = 1.65;
+    root.add(exhaust);
+
+    const bladeGeometry = new THREE.BoxGeometry(0.06, 0.9, 0.14);
+    const bladeCount = 8;
+    for (let i = 0; i < bladeCount; i++) {
+      const blade = new THREE.Mesh(bladeGeometry, metal);
+      blade.name = `fan-blade-${i + 1}`;
+      const angle = (i / bladeCount) * Math.PI * 2;
+      blade.position.set(-1.15, Math.cos(angle) * 0.5, Math.sin(angle) * 0.5);
+      blade.rotation.x = angle;
+      root.add(blade);
+    }
+
+    const pylon = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.18), metalDark);
+    pylon.name = "pylon";
+    pylon.position.set(-0.2, 1.05, 0);
+    root.add(pylon);
+
+    return root;
+  }, []);
+
+  useModeEffects(group, mode, 1.1);
+  useFrame(() => {
+    const fan = group.children.find(child => child.name === "inlet-ring");
+    fan && (fan.rotation.x += 0.01);
+  });
+
+  return <primitive object={group} />;
 }
 
 export interface Viewer3DHandle {
@@ -70,7 +146,7 @@ export function Viewer3D({
   mode,
   controlsRef,
 }: {
-  modelUrl: string;
+  modelUrl: string | null;
   mode: ViewerMode;
   controlsRef: React.MutableRefObject<OrbitControlsImpl>;
 }) {
@@ -81,7 +157,7 @@ export function Viewer3D({
       <directionalLight position={[-5, -3, -5]} intensity={0.35} />
       <Suspense fallback={null}>
         <Center>
-          <Model url={modelUrl} mode={mode} />
+          {modelUrl ? <GltfModel url={modelUrl} mode={mode} /> : <ProceduralEngine mode={mode} />}
         </Center>
       </Suspense>
       <OrbitControls ref={controlsRef} enableDamping makeDefault />
