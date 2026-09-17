@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
+import { apiApp } from "./server/apiApp";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -203,7 +204,16 @@ function vitePluginStorageProxy(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
+function vitePluginModelsApi(): Plugin {
+  return {
+    name: "wingbox-models-api",
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use("/api", apiApp);
+    },
+  };
+}
+
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy(), vitePluginModelsApi()];
 
 export default defineConfig({
   plugins,
