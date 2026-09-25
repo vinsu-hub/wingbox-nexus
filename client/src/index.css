@@ -443,6 +443,17 @@ h1 { font-family:'Space Grotesk'; font-size:25px; line-height:1.05; letter-spaci
 /* === 3D MODEL INGESTION / VIEWER (Phase B) === */
 .viewer-canvas.viewer-live { background:var(--ip-viewer-bg,var(--navy)); }
 .viewer-canvas.viewer-live canvas { width:100%!important; height:100%!important; display:block; }
+.finding-hotspot.selected { box-shadow:0 0 0 5px color-mix(in srgb,var(--card) 60%,transparent),0 0 0 8px currentColor; transform:translate(-50%,-50%) scale(1.12); }
+/* === DAMAGE / 3D PAGE === */
+.damage3d-page { --ip-viewer-bg:var(--navy); color:var(--ink); }
+.damage3d-breadcrumb { color:var(--blue); font-size:10px; margin-bottom:10px; }.damage3d-breadcrumb span { color:var(--muted); margin:0 7px; }
+.damage3d-header { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; margin-bottom:18px; }.damage3d-header h1 { color:var(--navy); }.damage3d-header p { color:var(--muted); font-size:11px; margin-top:8px; }.damage3d-header p span { color:var(--muted); margin:0 7px; }
+.damage3d-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }.damage3d-actions .secondary-button { display:inline-flex; align-items:center; gap:6px; }
+.damage3d-layout { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(360px,.9fr); gap:16px; align-items:start; }
+.damage3d-camera-label { display:grid; place-items:center; width:100%; height:100%; color:var(--card); background:color-mix(in srgb,var(--ip-viewer-bg) 60%,var(--blue)); font-size:9px; font-weight:700; text-align:center; padding:0 6px; }
+.damage3d-page .finding-row { grid-template-columns:20px minmax(0,1fr) auto; }
+@media (max-width:1100px) { .damage3d-layout { grid-template-columns:1fr; } }
+@media (max-width:700px) { .damage3d-header { flex-direction:column; }.damage3d-actions { justify-content:flex-start; } }
 .import-model-modal { width:min(440px,calc(100vw - 30px)); }
 .import-model-tabs { display:flex; gap:8px; margin:14px 0 4px; }
 .import-model-tabs button { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; height:34px; border:1px solid #dae5ee; border-radius:4px; color:#5f748b; font-size:10px; cursor:pointer; }

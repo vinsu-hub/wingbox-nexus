@@ -2,6 +2,9 @@
 **/node_modules
 .pnpm-store/
 
+# Playwright MCP scratch output (console logs, page snapshots)
+.playwright-mcp/
+
 # Build outputs
 dist/
 build/

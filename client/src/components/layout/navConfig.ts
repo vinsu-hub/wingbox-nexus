@@ -54,7 +54,7 @@ export const navGroups: NavGroup[] = [
     items: [
       item("Inspections", ClipboardCheck, ROUTES.inspections),
       item("Findings", AlertTriangle),
-      item("Damage / 3D", Box),
+      item("Damage / 3D", Box, ROUTES.damage3d),
     ],
   },
   {

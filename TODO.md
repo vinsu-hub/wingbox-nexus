@@ -27,95 +27,190 @@ what's done, what's next, and how to pick the repo back up on a fresh machine.
 8. `pnpm check` (tsc) and `pnpm build` should both pass clean on a fresh clone — that's the
    baseline sanity check before starting new work.
 
-## Next up: render the A320 engine into a second presentation view ("Damage / 3D")
+## DONE: Damage / 3D on-model hotspots (Wave 1 item 1.1)
 
-**Goal:** the left nav already has a "Damage / 3D" item (INSPECTIONS group) that's currently an
-unbuilt stub (falls through to the generic `MissingView` placeholder). The reference spec
-(`WingBox-OS-Final-Specification.md` §3.10, in the WINGBOX OS reference folder) describes it as
-a second, genuinely different 3D presentation context: the same interactive viewer, but with
-findings shown as **numbered hotspot markers positioned directly on the 3D model surface**
-(instead of only a side-panel list, as Inspection Presentation currently does). There's even
-dead/unused CSS already in `client/src/index.css` for this (`.finding-hotspot`,
-`.hotspot-medium`, `.hotspot-low`) — leftover from an earlier design pass, never wired up.
+Built and verified — see `.agent-state.md`'s 2026-09-25 entry for the full story, including a
+real bug found and fixed (centroid/bbox/center-relative anchor points all degenerated to a
+tiny on-screen cluster because this engine's cover parts are huge and mostly separated along
+the one axis the default camera looks straight down — fixed by anchoring each marker in the
+camera's own screen plane instead of a fixed world direction). `Damage3DPage`, `Viewer3DHotspot`/
+`HotspotMarker` in `Viewer3D.tsx`, `data/mock/damage-3d.ts`, routed at `/damage-3d`, nav wired.
 
-### Implementation plan
+## Next up: Wave 1 of the build brief (`~/Downloads/wingbox-nexus-build-brief-wave1-wave2.md`)
 
-**1. Extend `client/src/pages/InspectionPresentation/Viewer3D.tsx` (additive only):**
-- Add `export interface Viewer3DHotspot { id; partName; number; severity: "Low"|"Medium"|"High"; label }`.
-- Add optional `hotspots?`, `selectedHotspotId?`, `onHotspotSelect?` props to `Viewer3D` and `GltfModel`.
-- New `HotspotMarker` component: each frame, `scene.getObjectByName(hotspot.partName)` →
-  `part.getWorldPosition(tmp)` → `group.parent!.worldToLocal(tmp)` → `group.position.copy(tmp)`.
-  Tracks the real world position of the named part every frame, including through the Exploded
-  View lerp animation, converted correctly into the marker's own parent-local space (the
-  `Center`-created group) so it isn't double-transformed.
-- Render via drei's `<Html>` **without the `center` prop** — `.finding-hotspot`'s existing CSS
-  already does its own `translate(-50%,-50%)`; adding `center` would double that offset and
-  visibly mis-position every badge. Watch for this specifically during verification.
-- Skip drei's `occlude` (raycasting a ~9M-triangle scene per marker per frame is a real perf risk).
-- `ProceduralEngine` and everything else in the file (modes, camera presets, Bounds/Center) stays
-  untouched — hotspots are only ever passed when a real model is loaded.
-- Add one new CSS rule near the existing hotspot styles for a "selected" state (ring/scale bump).
+Two corrections to the brief's own premises, confirmed against real code before this plan was
+written: Compliance and Life Tracking are already fully-built real pages (task is "wire to
+Supabase," not "build a page"); QA/QC, Audit Log, and Delivery have no page at all yet (genuinely
+new builds). No schema-as-code exists in the repo today (the one table, `models`, was created by
+a one-off imperative script) — this plan starts with introducing a lightweight versioned
+migration runner before any feature work, and adds a small `aircraft` FK-anchor table (no such
+table exists yet, and every new table below FKs to a tail number).
 
-**2. New mock data — `client/src/data/mock/damage-3d.ts`:**
-Same shape as `inspection-presentation.ts`'s `Finding`, plus `partName` (anchors the hotspot to a
-real scene node) and `number` (stable badge number). 4 findings anchored to real, verified part
-names from the curated 28-part STL kit, spread across the engine: `MainFan` (High), `BigCover1`
-(Medium), `Cover2` (Low), `BackCover` (Medium). Same aircraft/engine (`RP-C8841`, PW127M · Engine
-No. 2) as the existing inspection — same engine, different presentation context.
+### 0. Foundational migration infrastructure (build first)
 
-**3. New page — `client/src/pages/Damage3D/Damage3DPage.tsx`:**
-Modeled on `InspectionPresentationPage.tsx` but simpler (no tab strip — spec only calls for
-findings panel + filmstrip). Same `/api/models/latest` fetch, same toolbar/camera-preset pattern
-(filmstrip captions relabeled: "Fan face", "Cowl", "Left angle", "Right angle", "Underside").
-Findings panel reuses the existing `.inspection-report-panel`/`.findings-list`/`.finding-row`/
-`.finding-detail*` classes, bound to `damageFindings`, without the `<Tabs>` wrapper. Passes
-`hotspots`/`selectedHotspotId`/`onHotspotSelect` to `Viewer3D`; clicking a hotspot badge and
-clicking a findings-list row both drive the same `selectedFindingId` state. No Import modal on
-this page (out of scope — it showcases the already-persisted model).
+- Convention: `supabase/migrations/NNNN_description.sql`, applied in filename order, tracked in
+  a `schema_migrations(filename text primary key, applied_at timestamptz)` table.
+- Runner — `server/scripts/migrate.ts`, using the existing `postgres` npm package (same one
+  `server/scripts/provisionModels.ts` already uses via `SUPABASE_DB_PASSWORD`). Pull the
+  connection-string construction into a shared `server/lib/dbConnection.ts`. Self-bootstraps
+  `schema_migrations`, runs each unapplied file in a transaction, supports `--dry-run`.
+  `package.json` gets `"migrate": "tsx server/scripts/migrate.ts"`.
+- Fold in existing state: `provisionModels.ts`'s `create table models (...)` becomes
+  `supabase/migrations/0000_models.sql` verbatim. Its bucket-creation half (not SQL) moves to a
+  small standalone `server/scripts/ensureBuckets.ts` (reused later for a QC-attachments bucket).
+  Once `0000` is applied, delete `provisionModels.ts` — fully superseded.
+- `supabase/migrations/0001_aircraft.sql` — minimal FK-anchor table (`tail_number` PK, `type`,
+  `client`, `status`), seeded from `client/src/data/aircraft.ts`'s 12 rows. Not a full aircraft
+  CRUD module.
 
-**4. Routing and nav wiring:**
-- `client/src/routes.ts`: add `damage3d: "/damage-3d"`.
-- `client/src/components/layout/navConfig.ts`: give the `"Damage / 3D"` nav item its explicit
-  path (`ROUTES.damage3d`).
-- `client/src/App.tsx`: import `Damage3DPage`, add `<Route path="/damage-3d" .../>` **before**
-  the `/view/:slug` catch-all. `MissingView`'s `damage-3d` copy becomes unreachable — leave it.
+Final migration order (by real dependency order, not brief-item order): `0000_models` →
+`0001_aircraft` → `0002_audit_events` → `0003_directives` → `0004_qc_checklists` →
+`0005_life_tracking` → `0006_delivery` → `0007_profiles`.
 
-**5. New CSS shell:**
-Small new `.damage3d-page/-breadcrumb/-header/-actions/-layout` block in `index.css`, mirroring
-`.inspection-presentation-*` under honestly-named classes (~5 lines). Everything else
-(`.viewer-canvas`, `.viewer-tools`, `.viewer-mode-toggle`, `.viewer-filmstrip`,
-`.finding-hotspot`+variants, `.inspection-report-panel` and children, buttons) is reused verbatim.
+### 1.2 Compliance — real CRUD
 
-### Files to touch
+- `0003_directives.sql`: `directives` (type AD/SB, reference_no, title, applicability,
+  issuing_authority, effective_date, compliance_due, status, ata_chapter, notes) +
+  `directive_compliance_records` (directive_id FK, tail_number FK → aircraft, status,
+  complied_date, complied_by, signed_off_by, reference_doc_url).
+- `server/routes/directives.ts` — follows `models.ts`'s Router/try-catch/`{data,error}`/status-
+  code conventions, but introduce **zod for the first time** (installed, unused everywhere
+  today) — a create/edit form on two related tables is exactly its use case.
+  `GET /directives` (filter by status/type/ata_chapter/tail, sort by due date),
+  `GET /directives/:id` (+ fleet-wide history), `POST`/`PATCH /directives/:id` (zod-validated),
+  `POST /directives/:id/compliance-records` (mark-as-complied — same `complied_by`/
+  `signed_off_by` returns a `warning`, never a hard block, and calls `recordAuditEvent`).
+  Mounted at `apiApp.use("/directives", directivesRouter)`.
+- `ComplianceView.tsx`: swap the mock import for a fetch, with a small client-side reshape
+  function rebuilding the `{affected: [{tail, status}]}` shape the existing render code already
+  expects — only the data-loading layer changes, not the JSX.
+- Form: new `client/src/pages/Compliance/DirectiveForm.tsx` — first real `react-hook-form` +
+  `zodResolver` usage, opened via `Dialog` (matches Life Tracking's existing schedule-dialog
+  precedent).
+- Seed: `server/scripts/seed.ts` (idempotent upserts) — aircraft rows + 50+ directive/record
+  rows, run via `pnpm seed`. Reused by 1.3 and 1.5's seed needs too.
 
-| File | Change |
-|---|---|
-| `client/src/pages/InspectionPresentation/Viewer3D.tsx` | Add `Viewer3DHotspot` type, optional hotspot props, `HotspotMarker` component |
-| `client/src/data/mock/damage-3d.ts` | New — `DamageFinding` type, meta, 4 findings anchored to real part names |
-| `client/src/pages/Damage3D/Damage3DPage.tsx` | New — page component |
-| `client/src/routes.ts` | Add `damage3d` route constant |
-| `client/src/components/layout/navConfig.ts` | Wire explicit path for the "Damage / 3D" nav item |
-| `client/src/App.tsx` | Register new route before the `/view/:slug` catch-all |
-| `client/src/index.css` | New `.finding-hotspot.selected` rule + small `.damage3d-*` shell block |
+### 1.3 QA/QC (new page)
 
-### Verification
+- `0004_qc_checklists.sql`: `qc_checklist_templates` (name, category inspection/parts/delivery,
+  `items` jsonb) + `qc_checklist_instances` (template_id FK, linked_entity_type,
+  linked_entity_id as plain text — Inspections/Parts Requests have no real tables yet so this
+  can't be a real FK today, status, completed_by/at, `results` jsonb).
+- `server/routes/qcChecklists.ts`: template CRUD (zod-validated `items` array),
+  `POST /qc/instances`, `GET /qc/instances?linked_entity_type=&linked_entity_id=`,
+  `PATCH /qc/instances/:id` (technician submits results; status computed server-side: all-pass →
+  passed, any-fail → failed; calls `recordAuditEvent`), plus `POST /qc/attachments` (multer,
+  same shape as `models.ts`'s upload path) to a new private `qc-attachments` bucket via
+  `ensureBuckets.ts`. Mounted at `/qc`.
+- Page: `client/src/pages/QaQc/QaQcView.tsx` (list/filter) + checklist-run view (pass/fail/N-A +
+  notes + optional photo) + `TemplateForm.tsx` (react-hook-form + zod + `useFieldArray`,
+  admin-only). Export a reusable `<QcChecklistBadge instanceId=... />` — 1.6 embeds it.
+- Nav/route: `routes.ts` adds `qaQc: "/qa-qc"`; `navConfig.ts` gives the existing item its
+  explicit path; `App.tsx` route added before the catch-all.
+- Seed: 2+ templates (one `inspection`, one `parts`) via `seed.ts`.
 
-1. `pnpm check` and `pnpm build`.
-2. Live browser check (Playwright MCP is registered at user scope — `claude mcp add -s user`
-   already ran for it on the Mac; re-run `claude mcp add -s user playwright -- npx -y
-   @playwright/mcp@latest` on the new machine, or use `agent-browser` if installed there instead):
-   - Load `/damage-3d` (direct URL and via the left-nav item) — confirm it's no longer the
-     generic `MissingView` stub.
-   - Confirm the real engine renders and exactly 4 hotspot badges appear, each visibly on/near a
-     distinct part of the model surface — catches the `center`-prop double-offset bug if present.
-   - Click a hotspot → confirm the matching findings-panel row highlights, and vice versa.
-   - Exercise all 5 camera presets, Wireframe, Exploded View, and Wireframe+Exploded together —
-     confirm hotspots visibly follow their part outward during the explode animation.
-   - Click Export PDF / Present to Client / Gesture Mode — confirm the same stub-toast behavior
-     as Inspection Presentation, no crashes.
-   - Re-check `/inspection-presentation` still renders and behaves identically (regression check
-     on the shared `Viewer3D` component now carrying unused-there optional props).
-3. Update `.agent-state.md` with a session-log entry; commit once verified.
+### 1.4 Audit logging (write-path only, no UI this wave)
+
+- `0002_audit_events.sql` (built early — real dependency of 1.2 and 1.3, not just "paired"):
+  `audit_events(actor, action, entity_type, entity_id, before_state jsonb, after_state jsonb,
+  timestamp)`.
+- `server/lib/auditLog.ts` — one shared `recordAuditEvent(input)` helper. Two deliberate
+  choices: **non-throwing** (a failed audit write must never fail the primary action); **`actor`
+  is a plain string for now** (sourced from the same human-entered field the caller already has,
+  e.g. `complied_by`) since 1.7's real sessions don't exist yet — a `// TODO(1.7)` comment marks
+  where call sites switch to `req.user.email`.
+- Call sites: directives' mark-as-complied, QC completion, life-tracking threshold
+  acknowledgment, delivery sign-off — one line each.
+
+### 1.5 Life Tracking — real engine
+
+- `0005_life_tracking.sql`: `components` (aircraft_tail FK, part_number, serial_number,
+  description, ata_chapter, install_date) + `component_life_limits` (component_id FK,
+  limit_type hours/cycles/calendar_months, limit_value, current_value, last_updated).
+- Binding-constraint logic — `server/lib/lifeTracking.ts`: implement the **percentage-margin
+  fallback only** this wave, not the utilization-rate path (needs multiple readings over time to
+  derive a rate, and no readings-history table or flight-ops feed exists yet — building it now
+  would fabricate a number). Function signature still accepts an optional
+  `utilizationRatePerDay` so the real path is architecturally anticipated. Binding constraint =
+  lowest `remainingPct` across a component's limits; `calendar_months` always computes from
+  `install_date` at query time (manual edits to it rejected, 400). Threshold is a fixed 0.10
+  constant — "configurable" is Wave 2 System Settings' job (item 2.7).
+- `server/routes/lifeTracking.ts`: `GET /life-tracking/components` (server-computed binding
+  constraint), `GET .../components/:id` (detail), `PATCH /life-tracking/limits/:id` (manual
+  entry, zod-validated — the only mutation path, no live feed).
+- `LifeTrackingView.tsx`: swap the mock import for the fetch; add an "Update reading" action
+  reusing its existing `Dialog` pattern.
+- Seed: ~36 demo components (12 aircraft × 3) via `seed.ts`. Component-creation UI is Wave 2.
+
+### 1.6 Aircraft Delivery & Re-Delivery (new module, zero prior representation)
+
+- `0006_delivery.sql`: `delivery_events` (aircraft_tail FK, event_type delivery/redelivery,
+  counterparty, target_date, status, qc_checklist_instance_id FK) + `delivery_discrepancies`
+  (delivery_event_id FK, description, linked_compliance_directive_id FK nullable,
+  linked_finding_id — no FK constraint yet, `findings` table doesn't exist until Wave 2's 2.1 —
+  status).
+- `server/routes/delivery.ts`: `POST /delivery-events` (zod-validated; also creates the linked
+  `qc_checklist_instance` from a `category='delivery'` template in the same request), list/
+  detail, `POST .../discrepancies` + `PATCH` to resolve, `POST .../:id/sign-off` (400 unless
+  checklist is `passed` and all discrepancies `resolved`; success sets `status='complete'` +
+  `recordAuditEvent`). **`status` is never directly PATCH-able** — always server-derived, so it
+  can't drift from reality.
+- Page: `client/src/pages/Delivery/DeliveryView.tsx` (list) + event detail (`Drawer`, matching
+  `ComplianceView`'s directive-detail pattern) rendering `<QcChecklistBadge>`, the discrepancy
+  log, and a sign-off button disabled until gated.
+- Nav/route: `routes.ts` adds `delivery: "/delivery"`; new nav item in the existing **AIRCRAFT**
+  group (lifecycle work, same weight as Compliance/Life Tracking); `App.tsx` route before the
+  catch-all.
+
+### 1.7 Auth hardening (build last, on purpose)
+
+- `0007_profiles.sql`: `profiles(id references auth.users(id), email, role
+  Engineer/Planner/QA/Admin/Client, display_name)`.
+- Mechanism — **server-mediated sessions, not a client-side Supabase Auth client** (nothing in
+  `client/src` talks to Supabase directly today). New `server/routes/auth.ts` calls
+  `signInWithPassword` using the existing service-role client, mints an httpOnly/secure/sameSite
+  session cookie (`cookie-parser` — new small dependency — for reading it server-side).
+  `requireAuth` silently calls `supabase.auth.refreshSession()` when the access token is near
+  expiry, re-issuing the cookie transparently.
+- Route guard (none exists today): `client/src/lib/auth.tsx` — `AuthProvider`/`useAuth()`
+  calling `GET /api/auth/me` on mount, wrapping the routed tree in `App.tsx` with a
+  `RequireAuth` component redirecting to `/login`. Per-role page gating stays Wave 2 (2.2).
+- Server enforcement: `server/lib/auth.ts` exports `requireAuth` middleware, applied via
+  `apiApp.use(requireAuth)` globally except `/auth/*`.
+- `LoginPage.tsx`: replace the hardcoded check with `POST /api/auth/login`
+  (`credentials:'include'`); remove/repoint the decorative "Engineer / Client / Admin login"
+  button (currently wired to the same fake check).
+- Seeding: `server/scripts/seedUsers.ts` using `supabase.auth.admin.createUser(...)` (Auth users
+  can't be created via raw SQL) — one demo account per role + matching `profiles` rows.
+
+### 1.8 Parts Requests — flag only, no build
+
+Confirmed via code read: it's an interim static placeholder (own top-of-file comment says so)
+despite looking built. Not touched this wave.
+
+### Sequencing (adjusted from the brief's own order, with reasons)
+
+Brief's stated order: 1.1 → (1.2+1.4) → 1.3 → 1.5 → 1.6 → 1.7. Adjustments: migration infra
+(+ `aircraft`) goes first; **1.4 moves ahead of 1.2** since both 1.2 and 1.3's routes call
+`recordAuditEvent`, so its table + helper must exist first; 1.6 correctly depends on both 1.2
+and 1.3 (brief's order already satisfies this); 1.5 has no real dependency on 1.2/1.3/1.4, left
+in place; 1.7 last is correct — retrofitting `requireAuth` onto six already-built route files at
+the end is less error-prone than threading partial auth through each as it's built.
+
+**Final order:** foundational infra → 1.1 (done) → 1.4 → 1.2 → 1.3 → 1.5 → 1.6 → 1.7.
+
+### Verification (per item)
+
+`pnpm check` + `pnpm build` right after each item lands. After any new `.sql` file:
+`pnpm migrate -- --dry-run` then `pnpm migrate` for real, then a spot-check query. Live browser
+checks via `agent-browser` (Playwright MCP has a known screenshot-timeout issue specifically on
+WebGL-heavy pages like Inspection Presentation/Damage-3D — not relevant to 1.2-1.7, no WebGL
+there). Per-item specifics: 1.2 seed 50+ rows, verify filter/sort + persistence across refresh;
+1.3 complete a checklist end to end, confirm rollup + linked-entity status display; 1.4 query
+`audit_events` directly after a 1.2/1.3 action; 1.5 manual-enter a value, confirm binding
+constraint + dashboard rollup recompute; 1.6 full event → checklist → discrepancy → sign-off
+flow; 1.7 login with a seeded account, confirm `admin`/`admin123` no longer works, confirm
+unauthenticated redirect and 401 on protected API routes.
 
 ## Other known-good state (for context, not action items)
 

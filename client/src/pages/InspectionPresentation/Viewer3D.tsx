@@ -1,11 +1,24 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Bounds, Center, OrbitControls, useGLTF } from "@react-three/drei";
+import { Bounds, Center, Html, OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type OrbitControlsImpl = any;
 
 export type ViewerMode = "3D View" | "Exploded View" | "Wireframe";
+
+/** A finding rendered as a numbered marker anchored to a real named part of
+ * the loaded model, instead of a static x/y/z point — see HotspotMarker for
+ * why: it keeps the marker correctly positioned through the explode
+ * animation for free, since it tracks the part's actual live transform. */
+export interface Viewer3DHotspot {
+  id: string;
+  /** Must match a real scene node name (findable via scene.getObjectByName). */
+  partName: string;
+  number: number;
+  severity: "Low" | "Medium" | "High";
+  label: string;
+}
 
 /** Wireframe on a dense real-world mesh (millions of triangles, fused
  * together) renders as an unreadable solid blob — the overlapping lines
@@ -121,14 +134,130 @@ function useModeEffects(scene: THREE.Object3D, mode: ViewerMode, explodeFactor =
   });
 }
 
-function GltfModel({ url, mode }: { url: string; mode: ViewerMode }) {
+/** Tracks a named part's real, currently-animated world position every
+ * frame and renders a numbered badge there. Deliberately reads the part's
+ * position live (rather than a static stored x/y/z) so the marker follows
+ * automatically through Exploded View / Wireframe's explode animation —
+ * getWorldPosition gives the part's position in the top-level Scene's
+ * space, which worldToLocal then converts into this marker's own parent's
+ * local space (the Center-created group), matching how THREE interprets
+ * `.position` — without that conversion the marker would be transformed
+ * twice (once by its own position, once by the parent it's nested under). */
+function HotspotMarker({
+  scene,
+  hotspot,
+  selected,
+  onSelect,
+}: {
+  scene: THREE.Object3D;
+  hotspot: Viewer3DHotspot;
+  selected: boolean;
+  onSelect?: (id: string) => void;
+}) {
+  const { camera } = useThree();
+  const groupRef = useRef<THREE.Group>(null!);
+  const tmp = useMemo(() => new THREE.Vector3(), []);
+  // A part's own origin (node.position) is its geometric centroid, and this
+  // real engine kit's parts are laid out mainly along the engine's length —
+  // exactly the axis the default ("Inspection detail") camera looks straight
+  // down. Any offset chosen in an arbitrary world direction risks landing on
+  // that same near-invisible-on-screen axis (tried centroid alone, then an
+  // offset toward the part's own bounding-box top, then outward from the
+  // whole model's center — all three still clustered on screen, because the
+  // real separation between these specific parts is mostly depth, not
+  // width/height, from this angle). Anchoring in the CAMERA's own screen
+  // plane (its right/up vectors, captured once) instead guarantees visible
+  // separation regardless of which world axis the real geometry varies on —
+  // each marker gets pushed outward from its part's centroid at a distinct
+  // angle around that screen plane, sized to the part's own extent. Computed
+  // once (too expensive to redo every frame against multi-million-triangle
+  // parts) as a local-space offset from the part's own origin, then cheaply
+  // re-projected into world space each frame via localToWorld so it still
+  // tracks correctly through the explode animation.
+  const localAnchor = useRef<THREE.Vector3 | null>(null);
+
+  useFrame(() => {
+    const part = scene.getObjectByName(hotspot.partName);
+    const group = groupRef.current;
+    if (!part || !group || !group.parent) return;
+
+    if (!localAnchor.current) {
+      const partCenter = part.getWorldPosition(new THREE.Vector3());
+      const partBox = new THREE.Box3().setFromObject(part);
+      const partSize = partBox.getSize(new THREE.Vector3());
+      const partRadius = Math.max(partSize.x, partSize.y, partSize.z) / 2;
+
+      const cameraRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+      const cameraUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+      // Spread markers around a circle in the camera's screen plane, angle
+      // keyed to each finding's stable number so different findings don't
+      // pick the same direction even when their parts are close together.
+      const angle = (hotspot.number / 4) * Math.PI * 2;
+      const screenOffset = cameraRight.multiplyScalar(Math.cos(angle)).add(cameraUp.multiplyScalar(Math.sin(angle)));
+
+      const worldAnchor = partCenter.clone().addScaledVector(screenOffset, partRadius * 2);
+      localAnchor.current = part.worldToLocal(worldAnchor);
+    }
+
+    part.localToWorld(tmp.copy(localAnchor.current));
+    group.parent.worldToLocal(tmp);
+    group.position.copy(tmp);
+  });
+
+  const severityClass = hotspot.severity === "Medium" ? "hotspot-medium" : hotspot.severity === "Low" ? "hotspot-low" : "";
+
+  return (
+    <group ref={groupRef}>
+      {/* No `center` prop here — .finding-hotspot already does its own
+       * translate(-50%,-50%); adding drei's `center` would double that
+       * offset and visibly mis-position every badge. */}
+      <Html zIndexRange={[10, 0]}>
+        <button
+          type="button"
+          className={["finding-hotspot", severityClass, selected ? "selected" : ""].filter(Boolean).join(" ")}
+          onClick={() => onSelect?.(hotspot.id)}
+        >
+          <b>{hotspot.number}</b>
+          <span>{hotspot.label}</span>
+        </button>
+      </Html>
+    </group>
+  );
+}
+
+function GltfModel({
+  url,
+  mode,
+  hotspots,
+  selectedHotspotId,
+  onHotspotSelect,
+}: {
+  url: string;
+  mode: ViewerMode;
+  hotspots?: Viewer3DHotspot[];
+  selectedHotspotId?: string;
+  onHotspotSelect?: (id: string) => void;
+}) {
   const { scene } = useGLTF(url, true);
   // A real multi-part kit's largest components dominate the scene's bounding
   // box, so a part sitting near the shared center gets a proportionally tiny
   // center-relative offset at the default factor — bump it here so parts of
   // any size pull apart clearly instead of only the outermost ones moving.
   useModeEffects(scene, mode, 2.6);
-  return <primitive object={scene} />;
+  return (
+    <>
+      <primitive object={scene} />
+      {hotspots?.map(hotspot => (
+        <HotspotMarker
+          key={hotspot.id}
+          scene={scene}
+          hotspot={hotspot}
+          selected={hotspot.id === selectedHotspotId}
+          onSelect={onHotspotSelect}
+        />
+      ))}
+    </>
+  );
 }
 
 const ENGINE_METAL = 0x8a94a3;
@@ -213,6 +342,9 @@ export function Viewer3D({
   mode,
   controlsRef,
   activeView = 0,
+  hotspots,
+  selectedHotspotId,
+  onHotspotSelect,
 }: {
   modelUrl: string | null;
   mode: ViewerMode;
@@ -220,6 +352,12 @@ export function Viewer3D({
   /** Index into the 5 filmstrip presets (Inspection detail, Engine inlet,
    * Left angle, Right angle, Lower cowl) — orbits the camera to match. */
   activeView?: number;
+  /** Optional on-model finding markers. Only ever rendered against a real
+   * loaded model (GltfModel) — the procedural placeholder has no real part
+   * names for hotspots to anchor to, so this is simply never passed there. */
+  hotspots?: Viewer3DHotspot[];
+  selectedHotspotId?: string;
+  onHotspotSelect?: (id: string) => void;
 }) {
   return (
     <Canvas camera={{ position: [3, 2, 4.5], fov: 45 }} dpr={[1, 2]}>
@@ -238,7 +376,17 @@ export function Viewer3D({
          * outward, but a small margin still let them crowd the frame edge. */}
         <Bounds fit clip observe margin={1.8} key={modelUrl ?? "placeholder"}>
           <Center>
-            {modelUrl ? <GltfModel url={modelUrl} mode={mode} /> : <ProceduralEngine mode={mode} />}
+            {modelUrl ? (
+              <GltfModel
+                url={modelUrl}
+                mode={mode}
+                hotspots={hotspots}
+                selectedHotspotId={selectedHotspotId}
+                onHotspotSelect={onHotspotSelect}
+              />
+            ) : (
+              <ProceduralEngine mode={mode} />
+            )}
           </Center>
         </Bounds>
       </Suspense>
