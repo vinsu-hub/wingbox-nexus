@@ -8,6 +8,8 @@
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "preview": "vite preview --host",
+    "migrate": "tsx server/scripts/migrate.ts",
+    "seed": "tsx server/scripts/seed.ts",
     "check": "tsc --noEmit",
     "format": "prettier --write ."
   },

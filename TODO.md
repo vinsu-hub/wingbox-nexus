@@ -46,26 +46,20 @@ a one-off imperative script) — this plan starts with introducing a lightweight
 migration runner before any feature work, and adds a small `aircraft` FK-anchor table (no such
 table exists yet, and every new table below FKs to a tail number).
 
-### 0. Foundational migration infrastructure (build first)
+### DONE: 0. Foundational migration infrastructure
 
-- Convention: `supabase/migrations/NNNN_description.sql`, applied in filename order, tracked in
-  a `schema_migrations(filename text primary key, applied_at timestamptz)` table.
-- Runner — `server/scripts/migrate.ts`, using the existing `postgres` npm package (same one
-  `server/scripts/provisionModels.ts` already uses via `SUPABASE_DB_PASSWORD`). Pull the
-  connection-string construction into a shared `server/lib/dbConnection.ts`. Self-bootstraps
-  `schema_migrations`, runs each unapplied file in a transaction, supports `--dry-run`.
-  `package.json` gets `"migrate": "tsx server/scripts/migrate.ts"`.
-- Fold in existing state: `provisionModels.ts`'s `create table models (...)` becomes
-  `supabase/migrations/0000_models.sql` verbatim. Its bucket-creation half (not SQL) moves to a
-  small standalone `server/scripts/ensureBuckets.ts` (reused later for a QC-attachments bucket).
-  Once `0000` is applied, delete `provisionModels.ts` — fully superseded.
-- `supabase/migrations/0001_aircraft.sql` — minimal FK-anchor table (`tail_number` PK, `type`,
-  `client`, `status`), seeded from `client/src/data/aircraft.ts`'s 12 rows. Not a full aircraft
-  CRUD module.
+Built and verified against the real database — see `.agent-state.md`'s 2026-09-25 (cont'd) entry.
+`server/lib/dbConnection.ts`, `server/scripts/migrate.ts` (`pnpm migrate`, `pnpm migrate --
+--dry-run`), `server/scripts/ensureBuckets.ts`, `server/scripts/seed.ts` (`pnpm seed`),
+`supabase/migrations/0000_models.sql` + `0001_aircraft.sql` both applied. `provisionModels.ts`
+deleted (fully superseded).
 
 Final migration order (by real dependency order, not brief-item order): `0000_models` →
 `0001_aircraft` → `0002_audit_events` → `0003_directives` → `0004_qc_checklists` →
 `0005_life_tracking` → `0006_delivery` → `0007_profiles`.
+
+**Next: 1.4 (audit logging) — `0002_audit_events.sql` + `server/lib/auditLog.ts` — before 1.2**,
+since 1.2 and 1.3's routes both call `recordAuditEvent`.
 
 ### 1.2 Compliance — real CRUD
 
