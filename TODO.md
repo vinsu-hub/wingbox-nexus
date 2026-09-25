@@ -58,8 +58,14 @@ Final migration order (by real dependency order, not brief-item order): `0000_mo
 `0001_aircraft` → `0002_audit_events` → `0003_directives` → `0004_qc_checklists` →
 `0005_life_tracking` → `0006_delivery` → `0007_profiles`.
 
-**Next: 1.4 (audit logging) — `0002_audit_events.sql` + `server/lib/auditLog.ts` — before 1.2**,
-since 1.2 and 1.3's routes both call `recordAuditEvent`.
+### DONE: 1.4 Audit logging (write-path only, no UI this wave)
+
+Built and verified against the real database — see `.agent-state.md`'s 2026-09-25 (cont'd 2)
+entry. `supabase/migrations/0002_audit_events.sql` applied; `server/lib/auditLog.ts` exports
+`recordAuditEvent(input)` (non-throwing, `actor` stays a plain string until 1.7). No call sites
+yet — 1.2/1.3/1.5/1.6 wire it in as they're built.
+
+**Next: 1.2 (Compliance real CRUD)** — first real zod and react-hook-form usage in the codebase.
 
 ### 1.2 Compliance — real CRUD
 
