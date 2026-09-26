@@ -29,6 +29,7 @@ import {
   SidePanel,
 } from "@/components/shared/SideRail";
 import { Progress } from "@/components/ui/progress";
+import { QcChecklistBadge } from "@/pages/QaQc/QcChecklistBadge";
 import { aircraft } from "@/data/aircraft";
 import {
   inspectionAsOf,
@@ -346,6 +347,7 @@ export function InspectionsPage() {
             >
               View Aircraft Record <ArrowRight size={13} />
             </Link>
+            <QcChecklistBadge linkedEntityType="inspection" linkedEntityId={selectedInspection.id} />
           </SidePanel>
           <SidePanel
             title="Upcoming Inspections"

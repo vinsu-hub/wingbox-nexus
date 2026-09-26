@@ -57,11 +57,8 @@ async function seedDirectives(sql: ReturnType<typeof createDbConnection>) {
       on conflict do nothing
       returning id
     `;
-    // `on conflict do nothing` has no natural key to conflict on here (no
-    // unique constraint on reference_no), so re-running this script creates
-    // duplicate directives — acceptable for a demo seed script that's meant
-    // to be run once per fresh environment, not repeatedly against a
-    // populated one. Skip inserting records if this run didn't insert a row.
+    // No unique key on reference_no, so main() only calls this when the
+    // table is empty — otherwise re-running seed would duplicate directives.
     if (!directive) continue;
 
     const applicable = aircraft.filter(item => item.type.startsWith(demo.family));
@@ -86,13 +83,62 @@ async function seedDirectives(sql: ReturnType<typeof createDbConnection>) {
   console.log(`directives: seeded ${DEMO_DIRECTIVES.length} directives, ${recordCount} compliance records`);
 }
 
+const QC_TEMPLATES = [
+  {
+    name: "Borescope Inspection QA",
+    category: "inspection",
+    items: [
+      { id: "tooling", label: "Borescope calibrated and serial recorded", requiresPhoto: false },
+      { id: "access", label: "Inspection ports opened per AMM, blanks fitted", requiresPhoto: false },
+      { id: "blades", label: "Compressor and turbine blades imaged", requiresPhoto: true },
+      { id: "findings", label: "All findings logged with ATA reference", requiresPhoto: false },
+      { id: "closeout", label: "Ports closed, torque-checked and lockwired", requiresPhoto: true },
+    ],
+  },
+  {
+    name: "Incoming Parts Receiving Inspection",
+    category: "parts",
+    items: [
+      { id: "cert", label: "Authorized release certificate (EASA Form 1 / FAA 8130-3) present", requiresPhoto: true },
+      { id: "pn-sn", label: "Part and serial numbers match paperwork", requiresPhoto: false },
+      { id: "shelf", label: "Shelf life / cure date within limits", requiresPhoto: false },
+      { id: "damage", label: "No shipping damage or contamination", requiresPhoto: true },
+      { id: "esd", label: "ESD / preservation packaging intact where required", requiresPhoto: false },
+    ],
+  },
+  {
+    name: "Lease Return Records Audit",
+    category: "delivery",
+    items: [
+      { id: "logbooks", label: "Aircraft and engine logbooks complete and continuous", requiresPhoto: false },
+      { id: "ad-status", label: "AD compliance status report reconciled", requiresPhoto: false },
+      { id: "llp", label: "LLP back-to-birth traceability verified", requiresPhoto: false },
+      { id: "cofa", label: "Certificate of Airworthiness and registration current", requiresPhoto: true },
+      { id: "condition", label: "Return-condition inspection signed off", requiresPhoto: false },
+    ],
+  },
+];
+
+async function seedQcTemplates(sql: ReturnType<typeof createDbConnection>) {
+  for (const template of QC_TEMPLATES) {
+    await sql`
+      insert into qc_checklist_templates (name, category, items)
+      values (${template.name}, ${template.category}, ${sql.json(template.items)})
+      on conflict (name) do update set category = excluded.category, items = excluded.items
+    `;
+  }
+  console.log(`qc_checklist_templates: seeded ${QC_TEMPLATES.length} templates`);
+}
+
 async function main() {
   const sql = createDbConnection();
   try {
     await seedAircraft(sql);
-    await seedDirectives(sql);
-    // Wave 1 items 1.3 (qc_checklist_templates) and 1.5 (components) add
-    // their own seed functions here as their tables land.
+    const [{ count }] = await sql`select count(*)::int as count from directives`;
+    if (count === 0) await seedDirectives(sql);
+    else console.log(`directives: ${count} already present, skipped`);
+    await seedQcTemplates(sql);
+    // Wave 1 item 1.5 (components) adds its seed function here.
   } finally {
     await sql.end();
   }

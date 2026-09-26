@@ -75,39 +75,15 @@ now fetches real data via `directivesApi.ts`'s `toDirectiveWithAffected()` resha
 per-aircraft "Update" mark-as-complied action. Confirmed live: create, validation errors, the
 same-person warning, and a status change propagating through the pill/summary/matrix together.
 
-**Next: 1.3 (QA/QC)** — genuinely new page, no prior UI exists.
+### DONE: 1.3 QA/QC
 
-### 1.3 QA/QC (new page)
+Built and verified (curl + live browser) — see `.agent-state.md`'s 2026-09-26 (cont'd) entry.
+`0004_qc_checklists.sql` applied, 3 templates seeded, `qc-attachments` bucket created,
+`/api/qc` routes, `/qa-qc` page, `QcChecklistBadge` on the Inspections page. Template authoring UI
+deferred to Wave 2 (2.4) per the brief.
 
-- `0004_qc_checklists.sql`: `qc_checklist_templates` (name, category inspection/parts/delivery,
-  `items` jsonb) + `qc_checklist_instances` (template_id FK, linked_entity_type,
-  linked_entity_id as plain text — Inspections/Parts Requests have no real tables yet so this
-  can't be a real FK today, status, completed_by/at, `results` jsonb).
-- `server/routes/qcChecklists.ts`: template CRUD (zod-validated `items` array),
-  `POST /qc/instances`, `GET /qc/instances?linked_entity_type=&linked_entity_id=`,
-  `PATCH /qc/instances/:id` (technician submits results; status computed server-side: all-pass →
-  passed, any-fail → failed; calls `recordAuditEvent`), plus `POST /qc/attachments` (multer,
-  same shape as `models.ts`'s upload path) to a new private `qc-attachments` bucket via
-  `ensureBuckets.ts`. Mounted at `/qc`.
-- Page: `client/src/pages/QaQc/QaQcView.tsx` (list/filter) + checklist-run view (pass/fail/N-A +
-  notes + optional photo) + `TemplateForm.tsx` (react-hook-form + zod + `useFieldArray`,
-  admin-only). Export a reusable `<QcChecklistBadge instanceId=... />` — 1.6 embeds it.
-- Nav/route: `routes.ts` adds `qaQc: "/qa-qc"`; `navConfig.ts` gives the existing item its
-  explicit path; `App.tsx` route added before the catch-all.
-- Seed: 2+ templates (one `inspection`, one `parts`) via `seed.ts`.
+**Next: 1.5 (Life Tracking real engine).**
 
-### 1.4 Audit logging (write-path only, no UI this wave)
-
-- `0002_audit_events.sql` (built early — real dependency of 1.2 and 1.3, not just "paired"):
-  `audit_events(actor, action, entity_type, entity_id, before_state jsonb, after_state jsonb,
-  timestamp)`.
-- `server/lib/auditLog.ts` — one shared `recordAuditEvent(input)` helper. Two deliberate
-  choices: **non-throwing** (a failed audit write must never fail the primary action); **`actor`
-  is a plain string for now** (sourced from the same human-entered field the caller already has,
-  e.g. `complied_by`) since 1.7's real sessions don't exist yet — a `// TODO(1.7)` comment marks
-  where call sites switch to `req.user.email`.
-- Call sites: directives' mark-as-complied, QC completion, life-tracking threshold
-  acknowledgment, delivery sign-off — one line each.
 
 ### 1.5 Life Tracking — real engine
 

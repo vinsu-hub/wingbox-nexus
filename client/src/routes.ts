@@ -16,6 +16,7 @@ export const ROUTES = {
   aiAssistant: "/ai-assistant",
   inspectionPresentation: (id?: string) => `/inspection-presentation${id ? `/${id}` : ""}`,
   damage3d: "/damage-3d",
+  qaQc: "/qa-qc",
   view: (slug: string) => `/view/${slug}`,
 } as const;
 
