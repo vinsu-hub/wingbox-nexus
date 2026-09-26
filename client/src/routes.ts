@@ -17,6 +17,7 @@ export const ROUTES = {
   inspectionPresentation: (id?: string) => `/inspection-presentation${id ? `/${id}` : ""}`,
   damage3d: "/damage-3d",
   qaQc: "/qa-qc",
+  delivery: "/delivery",
   view: (slug: string) => `/view/${slug}`,
 } as const;
 

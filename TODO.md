@@ -82,48 +82,21 @@ Built and verified (curl + live browser) — see `.agent-state.md`'s 2026-09-26 
 `/api/qc` routes, `/qa-qc` page, `QcChecklistBadge` on the Inspections page. Template authoring UI
 deferred to Wave 2 (2.4) per the brief.
 
-**Next: 1.5 (Life Tracking real engine).**
+### DONE: 1.5 Life Tracking — real engine
 
+Built and verified (curl + live browser) — see `.agent-state.md`'s 2026-09-26 (cont'd 2) entry.
+`0005_life_tracking.sql` applied, 36 components / 72 limits seeded, `/api/life-tracking`, real
+binding-constraint engine in `server/lib/lifeTracking.ts`, Update-reading + component detail +
+acknowledge in the UI, live rollup strip on the Dashboard.
 
-### 1.5 Life Tracking — real engine
+### DONE: 1.6 Delivery & Re-Delivery
 
-- `0005_life_tracking.sql`: `components` (aircraft_tail FK, part_number, serial_number,
-  description, ata_chapter, install_date) + `component_life_limits` (component_id FK,
-  limit_type hours/cycles/calendar_months, limit_value, current_value, last_updated).
-- Binding-constraint logic — `server/lib/lifeTracking.ts`: implement the **percentage-margin
-  fallback only** this wave, not the utilization-rate path (needs multiple readings over time to
-  derive a rate, and no readings-history table or flight-ops feed exists yet — building it now
-  would fabricate a number). Function signature still accepts an optional
-  `utilizationRatePerDay` so the real path is architecturally anticipated. Binding constraint =
-  lowest `remainingPct` across a component's limits; `calendar_months` always computes from
-  `install_date` at query time (manual edits to it rejected, 400). Threshold is a fixed 0.10
-  constant — "configurable" is Wave 2 System Settings' job (item 2.7).
-- `server/routes/lifeTracking.ts`: `GET /life-tracking/components` (server-computed binding
-  constraint), `GET .../components/:id` (detail), `PATCH /life-tracking/limits/:id` (manual
-  entry, zod-validated — the only mutation path, no live feed).
-- `LifeTrackingView.tsx`: swap the mock import for the fetch; add an "Update reading" action
-  reusing its existing `Dialog` pattern.
-- Seed: ~36 demo components (12 aircraft × 3) via `seed.ts`. Component-creation UI is Wave 2.
+Built and verified (curl + full UI flow) — see `.agent-state.md`'s 2026-09-26 (cont'd 3) entry.
+`0006_delivery.sql` applied, `/api/delivery`, `/delivery` page + nav item, records checklist
+auto-created from the delivery QA/QC template, server-enforced sign-off gate, audit on every
+mutation. One completed demo event (RP-C5517 / Orix Aviation) kept.
 
-### 1.6 Aircraft Delivery & Re-Delivery (new module, zero prior representation)
-
-- `0006_delivery.sql`: `delivery_events` (aircraft_tail FK, event_type delivery/redelivery,
-  counterparty, target_date, status, qc_checklist_instance_id FK) + `delivery_discrepancies`
-  (delivery_event_id FK, description, linked_compliance_directive_id FK nullable,
-  linked_finding_id — no FK constraint yet, `findings` table doesn't exist until Wave 2's 2.1 —
-  status).
-- `server/routes/delivery.ts`: `POST /delivery-events` (zod-validated; also creates the linked
-  `qc_checklist_instance` from a `category='delivery'` template in the same request), list/
-  detail, `POST .../discrepancies` + `PATCH` to resolve, `POST .../:id/sign-off` (400 unless
-  checklist is `passed` and all discrepancies `resolved`; success sets `status='complete'` +
-  `recordAuditEvent`). **`status` is never directly PATCH-able** — always server-derived, so it
-  can't drift from reality.
-- Page: `client/src/pages/Delivery/DeliveryView.tsx` (list) + event detail (`Drawer`, matching
-  `ComplianceView`'s directive-detail pattern) rendering `<QcChecklistBadge>`, the discrepancy
-  log, and a sign-off button disabled until gated.
-- Nav/route: `routes.ts` adds `delivery: "/delivery"`; new nav item in the existing **AIRCRAFT**
-  group (lifecycle work, same weight as Compliance/Life Tracking); `App.tsx` route before the
-  catch-all.
+**Next: 1.7 (auth hardening).**
 
 ### 1.7 Auth hardening (build last, on purpose)
 

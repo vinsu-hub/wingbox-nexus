@@ -42,6 +42,9 @@ const RESULT_OPTIONS: { value: ItemResult; label: string }[] = [
   { value: "na", label: "N/A" },
 ];
 
+/** Delivery events are keyed by UUID; show a short prefix instead. */
+const shortId = (id: string) => (id.length > 20 ? id.slice(0, 8) : id);
+
 const dateLabel = (value: string | null) =>
   value ? new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—";
 
@@ -179,7 +182,7 @@ export function QaQcView() {
               {visible.map(instance => (
                 <TableRow key={instance.id}>
                   <TableCell><strong>{templateById.get(instance.templateId)?.name ?? "Unknown template"}</strong></TableCell>
-                  <TableCell>{LINKED_ENTITY_LABEL[instance.linkedEntityType]} · {instance.linkedEntityId}</TableCell>
+                  <TableCell>{LINKED_ENTITY_LABEL[instance.linkedEntityType]} · {shortId(instance.linkedEntityId)}</TableCell>
                   <TableCell><StatusPill status={QC_STATUS_LABEL[instance.status]} tone={QC_STATUS_TONE[instance.status]} /></TableCell>
                   <TableCell>{instance.completedBy ?? "—"}</TableCell>
                   <TableCell>{dateLabel(instance.completedAt)}</TableCell>
@@ -255,7 +258,7 @@ export function QaQcView() {
         <DialogContent className="directive-form-dialog qaqc-run-dialog">
           <DialogTitle>{runningTemplate?.name ?? "Checklist"}</DialogTitle>
           <DialogDescription>
-            {running && `${LINKED_ENTITY_LABEL[running.linkedEntityType]} · ${running.linkedEntityId} · `}
+            {running && `${LINKED_ENTITY_LABEL[running.linkedEntityType]} · ${shortId(running.linkedEntityId)} · `}
             {running && <StatusPill status={QC_STATUS_LABEL[running.status]} tone={QC_STATUS_TONE[running.status]} />}
           </DialogDescription>
           <form onSubmit={event => { event.preventDefault(); void submitRun(); }}>

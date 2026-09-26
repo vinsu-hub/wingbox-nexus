@@ -532,3 +532,27 @@ h1 { font-family:'Space Grotesk'; font-size:25px; line-height:1.05; letter-spaci
 .dashboard-life-alert { display:flex; align-items:center; gap:10px; margin:-8px 0 18px; padding:10px 14px; border:1px solid color-mix(in srgb,var(--amber) 40%,var(--line)); background:color-mix(in srgb,var(--amber) 8%,var(--card)); border-radius:6px; font-size:12px; color:var(--ink); }
 .dashboard-life-alert svg { color:var(--amber); flex:0 0 auto; }
 .dashboard-life-alert a { margin-left:auto; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; color:var(--blue); font-weight:600; font-size:11px; }
+/* === DELIVERY & RE-DELIVERY === */
+.delivery-view { min-width:0; }
+.delivery-panel { padding:16px; margin-top:16px; }
+.delivery-tail strong { color:var(--blue); font-size:11px; }
+.delivery-sub { display:block; color:var(--muted); font-size:10px; }
+.delivery-drawer[data-vaul-drawer-direction=right] { width:min(520px,100vw); max-width:520px; }
+.delivery-body { display:flex; flex-direction:column; gap:18px; }
+.delivery-body h3 { font-family:'Space Grotesk',sans-serif; font-size:14px; color:var(--navy); margin-bottom:8px; }
+.delivery-actor { display:block; font-size:10px; color:var(--muted); }
+.delivery-body input,.delivery-body select { display:block; width:100%; margin-top:6px; padding:8px 10px; border:1px solid var(--line); border-radius:4px; font-size:12px; color:var(--ink); background:var(--card); }
+.delivery-note { color:var(--muted); font-size:10px; margin-top:6px; }
+.delivery-discrepancies { list-style:none; margin:0; padding:0; }
+.delivery-discrepancies li { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
+.delivery-discrepancies li strong { display:block; font-size:12px; color:var(--ink); font-weight:600; }
+.delivery-discrepancies li small { color:var(--muted); font-size:10px; }
+.delivery-discrepancies li small a { color:var(--blue); }
+.delivery-discrepancies li.is-resolved strong { color:var(--muted); text-decoration:line-through; }
+.delivery-empty { color:var(--muted); font-size:11px; }
+.delivery-add { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.delivery-add .directive-form-row select { margin-top:0; }
+.delivery-add button { align-self:flex-start; }
+.delivery-signoff .primary-button:disabled { opacity:.5; cursor:not-allowed; }
+.delivery-signed { display:flex; align-items:center; gap:6px; color:var(--green); font-size:12px; }
+.delivery-body .qc-badge { margin-top:0; }

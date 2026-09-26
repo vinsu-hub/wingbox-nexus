@@ -4,6 +4,7 @@ import { modelsRouter } from "./routes/models.js";
 import { directivesRouter } from "./routes/directives.js";
 import { qcRouter } from "./routes/qcChecklists.js";
 import { lifeTrackingRouter } from "./routes/lifeTracking.js";
+import { deliveryRouter } from "./routes/delivery.js";
 
 /** Shared API app mounted both by Vite's dev middleware (vite.config.ts) and
  * the production Express server (server/index.ts), so route/body-parsing
@@ -14,3 +15,4 @@ apiApp.use("/models", modelsRouter);
 apiApp.use("/directives", directivesRouter);
 apiApp.use("/qc", qcRouter);
 apiApp.use("/life-tracking", lifeTrackingRouter);
+apiApp.use("/delivery", deliveryRouter);

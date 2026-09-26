@@ -19,6 +19,7 @@ import { AiAssistantPage } from "@/pages/AiAssistant/AiAssistantPage";
 import { InspectionPresentationPage } from "@/pages/InspectionPresentation/InspectionPresentationPage";
 import { Damage3DPage } from "@/pages/Damage3D/Damage3DPage";
 import { QaQcView } from "@/pages/QaQc/QaQcView";
+import { DeliveryView } from "@/pages/Delivery/DeliveryView";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
         <Route path="/inspection-presentation/:id?" component={() => <Layout><InspectionPresentationPage /></Layout>} />
         <Route path="/damage-3d" component={() => <Layout><Damage3DPage /></Layout>} />
         <Route path="/qa-qc" component={() => <Layout><QaQcView /></Layout>} />
+        <Route path="/delivery" component={() => <Layout><DeliveryView /></Layout>} />
         <Route path="/view/:slug">{params => <Layout><MissingView slug={params.slug} /></Layout>}</Route>
         <Route component={LoginPage} />
       </Switch>
