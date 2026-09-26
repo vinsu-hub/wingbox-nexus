@@ -14,9 +14,32 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
 import { SummaryCardRow } from "@/components/shared/SummaryCardRow";
+import { ROUTES } from "@/routes";
+import { fetchSummary, type LifeSummary } from "@/pages/LifeTracking/lifeTrackingApi";
 
 const aircraftImage = "/assets/wingbox-aircraft-hero.jpg";
+
+/** Live fleet rollup from real component life data — hidden until loaded,
+ * and when nothing is at or near a limit. */
+function LifeLimitAlert() {
+  const [summary, setSummary] = useState<LifeSummary | null>(null);
+  useEffect(() => {
+    fetchSummary().then(setSummary).catch(() => setSummary(null));
+  }, []);
+  if (!summary || (!summary.approaching && !summary.overdue)) return null;
+  return (
+    <div className="dashboard-life-alert" role="status">
+      <AlertTriangle size={16} />
+      <span>
+        <strong>{summary.approaching}</strong> component{summary.approaching === 1 ? "" : "s"} within {Math.round(summary.threshold * 100)}% of a life limit
+        {summary.overdue > 0 && <> · <strong>{summary.overdue}</strong> beyond limit</>}
+      </span>
+      <Link href={ROUTES.lifeTracking}>Review in Life Tracking <ArrowRight size={12} /></Link>
+    </div>
+  );
+}
 
 export function DashboardPage() {
   return (
@@ -38,6 +61,7 @@ export function DashboardPage() {
           { icon: Box, label: "Parts Requests", value: "6", foot: "↑ 1 from last week", tone: "amber" },
         ]}
       />
+      <LifeLimitAlert />
       <div className="dashboard-grid">
         <div className="overview-hero">
           <img src={aircraftImage} alt="Aircraft over clouds" />

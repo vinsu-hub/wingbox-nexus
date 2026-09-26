@@ -130,6 +130,85 @@ async function seedQcTemplates(sql: ReturnType<typeof createDbConnection>) {
   console.log(`qc_checklist_templates: seeded ${QC_TEMPLATES.length} templates`);
 }
 
+// Same components, part numbers, serials and primary life-used profile as the
+// old mock module (client/src/data/mock/life-tracking.ts), now with real
+// multi-limit components. Every fourth component gets a secondary limit that
+// is more consumed than its primary one, so the binding-constraint logic has
+// cases where the binding limit isn't the "obvious" one.
+const LIFE_USED = [92, 56, 96, 72, 102, 34, 61, 88, 99, 48, 67, 27];
+const DAYS_PER_MONTH = 30.4375;
+
+type SeedLimit = { type: "hours" | "cycles" | "calendar_months"; limit: number; pct: number };
+
+function lifeSeedFor(index: number) {
+  const pct = (unitIndex: number) => LIFE_USED[(index + unitIndex * 3) % LIFE_USED.length];
+  const hoursPct = pct(0);
+  const cyclesPct = pct(1);
+  const calendarPct = pct(2);
+  return [
+    {
+      description: ["Engine", "APU", "Hydraulic Pump", "Avionics"][index % 4],
+      ata: ["72-00-00", "49-00-00", "29-11-00", "34-00-00"][index % 4],
+      limits: [
+        { type: "hours", limit: 5000, pct: hoursPct },
+        { type: "cycles", limit: 12000, pct: Math.round(hoursPct * 0.7) },
+        { type: "calendar_months", limit: 60, pct: index % 4 === 1 ? Math.min(hoursPct + 15, 104) : Math.round(hoursPct * 0.5) },
+      ] as SeedLimit[],
+    },
+    {
+      description: ["Landing Gear", "Wheel Assembly", "Brake System"][index % 3],
+      ata: ["32-10-00", "32-41-00", "32-42-00"][index % 3],
+      limits: [
+        { type: "cycles", limit: 12000, pct: cyclesPct },
+        { type: "calendar_months", limit: 120, pct: index % 4 === 2 ? Math.min(cyclesPct + 12, 104) : Math.round(cyclesPct * 0.6) },
+      ] as SeedLimit[],
+    },
+    {
+      description: ["Emergency Battery", "Oxygen Cylinder", "Fire Extinguisher"][index % 3],
+      ata: ["24-31-00", "35-20-00", "26-20-00"][index % 3],
+      limits: [{ type: "calendar_months", limit: 24, pct: calendarPct }] as SeedLimit[],
+    },
+  ];
+}
+
+async function seedLifeTracking(sql: ReturnType<typeof createDbConnection>) {
+  const now = Date.now();
+  let componentCount = 0;
+  let limitCount = 0;
+  for (let index = 0; index < aircraft.length; index++) {
+    const plane = aircraft[index];
+    const components = lifeSeedFor(index);
+    for (let unitIndex = 0; unitIndex < components.length; unitIndex++) {
+      const spec = components[unitIndex];
+      const calendar = spec.limits.find(limit => limit.type === "calendar_months")!;
+      const installDate = new Date(now - (calendar.pct / 100) * calendar.limit * DAYS_PER_MONTH * 86_400_000).toISOString().slice(0, 10);
+      const [component] = await sql`
+        insert into components (aircraft_tail, part_number, serial_number, description, ata_chapter, install_date)
+        values (
+          ${plane.tail},
+          ${`${["ENG", "LG", "CAL"][unitIndex]}-${12000 + index * 137}-${unitIndex + 1}`},
+          ${`WB${26000 + index * 31 + unitIndex}`},
+          ${spec.description}, ${spec.ata}, ${installDate}
+        )
+        on conflict (part_number, serial_number) do nothing
+        returning id
+      `;
+      if (!component) continue;
+      componentCount++;
+      for (const limit of spec.limits) {
+        const current = limit.type === "calendar_months" ? 0 : Math.round((limit.pct / 100) * limit.limit);
+        await sql`
+          insert into component_life_limits (component_id, limit_type, limit_value, current_value)
+          values (${component.id}, ${limit.type}, ${limit.limit}, ${current})
+          on conflict (component_id, limit_type) do nothing
+        `;
+        limitCount++;
+      }
+    }
+  }
+  console.log(`components: seeded ${componentCount} components, ${limitCount} life limits`);
+}
+
 async function main() {
   const sql = createDbConnection();
   try {
@@ -138,7 +217,7 @@ async function main() {
     if (count === 0) await seedDirectives(sql);
     else console.log(`directives: ${count} already present, skipped`);
     await seedQcTemplates(sql);
-    // Wave 1 item 1.5 (components) adds its seed function here.
+    await seedLifeTracking(sql);
   } finally {
     await sql.end();
   }

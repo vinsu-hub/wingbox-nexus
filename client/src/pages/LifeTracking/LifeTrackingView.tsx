@@ -14,7 +14,17 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { aircraft } from "@/data/aircraft";
-import { lifeComponents, type LifeComponent } from "@/data/mock/life-tracking";
+import { toast } from "sonner";
+import {
+  acknowledgeLimit,
+  fetchComponents,
+  LIMIT_LABEL,
+  LIMIT_SUFFIX,
+  toLifeRows,
+  updateReading,
+  type ApiComponent,
+  type LifeComponent,
+} from "./lifeTrackingApi";
 import {
   FilterableTable,
   type TableColumn,
@@ -83,15 +93,37 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduled, setScheduled] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
+  const [components, setComponents] = useState<ApiComponent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [reading, setReading] = useState<LifeComponent | null>(null);
+  const [readingValue, setReadingValue] = useState("");
+  const [actor, setActor] = useState("");
+  const [savingReading, setSavingReading] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
-  const scoped = lifeComponents.filter(
-    row => !tailNumber || row.tail === tailNumber
-  );
-  const risks = [...scoped]
+
+  const load = () => {
+    setLoading(true);
+    return fetchComponents(tailNumber)
+      .then(setComponents)
+      .catch(err => toast.error(err instanceof Error ? err.message : "Failed to load life-limited components."))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => {
+    void load();
+  }, [tailNumber]);
+
+  // One row per (component, limit) for the unit-filtered table; the
+  // component-level widgets below use each component's binding limit, so
+  // they count components, not limit rows.
+  const scoped = toLifeRows(components);
+  const bindingRows = scoped.filter(row => row.binding);
+  const detail = components.find(component => component.id === detailId) ?? null;
+  const risks = [...bindingRows]
     .filter(row => row.lifeUsedPct >= 90 || row.status === "Overdue")
     .sort((a, b) => b.lifeUsedPct - a.lifeUsedPct);
-  const ranking = [...scoped]
+  const ranking = [...bindingRows]
     .sort((a, b) => b.lifeUsedPct - a.lifeUsedPct)
     .slice(0, 5);
   const today = new Date();
@@ -99,7 +131,8 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
   const horizon = new Date(today);
   horizon.setDate(horizon.getDate() + 30);
   const upcoming = scoped
-    .filter(row => {
+    .filter((row): row is LifeComponent & { nextDue: string } => {
+      if (!row.nextDue) return false;
       const due = new Date(`${row.nextDue}T00:00:00`);
       return due >= today && due <= horizon;
     })
@@ -108,7 +141,7 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
     ["Healthy", "Due Soon", "Overdue"] as const
   ).map((label, index) => ({
     label,
-    value: scoped.filter(row => row.status === label).length,
+    value: bindingRows.filter(row => row.status === label).length,
     color: (["green", "amber", "red"] as const)[index],
   }));
   const rows = scoped.filter(row => {
@@ -177,7 +210,12 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
     {
       key: "component",
       header: "Component",
-      render: row => <strong>{row.component}</strong>,
+      render: row => (
+        <button className="life-component-link" onClick={() => setDetailId(row.componentId)}>
+          <strong>{row.component}</strong>
+          {row.binding && row.multiLimit && <em className="life-binding-tag" title="Reached first of this component's limits">Binding</em>}
+        </button>
+      ),
     },
     {
       key: "part",
@@ -212,23 +250,39 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
     {
       key: "due",
       header: "Next Due",
-      render: row => (
-        <time dateTime={row.nextDue}>{dateLabel(row.nextDue)}</time>
-      ),
+      render: row =>
+        row.nextDue ? (
+          <time dateTime={row.nextDue}>{dateLabel(row.nextDue)}</time>
+        ) : (
+          <span className="life-no-date" title="Projecting a due date for hours/cycles needs utilization data, which isn't tracked yet.">—</span>
+        ),
     },
     {
       key: "action",
       header: "Action",
       render: row => (
-        <button
-          className="life-schedule"
-          onClick={() => {
-            setScheduling(row);
-            setScheduleDate(scheduled[row.id] ?? "");
-          }}
-        >
-          {scheduled[row.id] ? "Edit draft" : "Schedule"}
-        </button>
+        <div className="life-actions">
+          {row.editable && (
+            <button
+              className="life-schedule"
+              onClick={() => {
+                setReading(row);
+                setReadingValue(String(Math.round(row.currentValue)));
+              }}
+            >
+              Update
+            </button>
+          )}
+          <button
+            className="life-schedule"
+            onClick={() => {
+              setScheduling(row);
+              setScheduleDate(scheduled[row.id] ?? "");
+            }}
+          >
+            {scheduled[row.id] ? "Edit draft" : "Schedule"}
+          </button>
+        </div>
       ),
     },
   ];
@@ -292,7 +346,7 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
                 );
               })}
             </div>
-            <span>{scoped.length} tracked components</span>
+            <span>{loading ? "Loading…" : `${components.length} tracked components`}</span>
           </div>
           <div ref={tableRef}>
             <AnimatePresence mode="wait" initial={false}>
@@ -374,7 +428,7 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
               {scoped.length ? (
                 <DonutChart
                   segments={segments}
-                  centerValue={scoped.length}
+                  centerValue={components.length}
                   centerLabel="Components"
                 />
               ) : (
@@ -383,7 +437,7 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
               <DonutLegend segments={segments} />
             </div>
             <p className="life-panel-note">
-              All life units · {tailNumber ?? "Entire fleet"}
+              Status by each component's binding limit · {tailNumber ?? "Entire fleet"}
             </p>
           </SidePanel>
           <SidePanel title="Most At-Risk Components">
@@ -486,6 +540,98 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
               </button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!reading} onOpenChange={open => { if (!open) setReading(null); }}>
+        <DialogContent className="life-schedule-dialog">
+          <DialogTitle>Update {reading ? LIMIT_LABEL[reading.limitType].toLowerCase() : ""} reading</DialogTitle>
+          <DialogDescription>
+            {reading?.tail} · {reading?.component} · limit {reading?.limitValue.toLocaleString("en-US")} {reading ? LIMIT_SUFFIX[reading.limitType] : ""}. Manual entry until a flight-ops feed exists.
+          </DialogDescription>
+          <form
+            onSubmit={async event => {
+              event.preventDefault();
+              if (!reading) return;
+              setSavingReading(true);
+              try {
+                const updated = await updateReading(reading.id, Number(readingValue), actor.trim());
+                toast.success(`${reading.tail} · ${reading.component} now at ${Math.round(updated.usedPct)}% of its ${LIMIT_LABEL[reading.limitType].toLowerCase()} limit.`);
+                setReading(null);
+                await load();
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Failed to update reading.");
+              } finally {
+                setSavingReading(false);
+              }
+            }}
+          >
+            <label>
+              Current total ({reading ? LIMIT_SUFFIX[reading.limitType] : ""})
+              <input type="number" min={0} step="any" required value={readingValue} onChange={event => setReadingValue(event.target.value)} />
+            </label>
+            <label>
+              Recorded by
+              <input required value={actor} onChange={event => setActor(event.target.value)} placeholder="Engineer name" />
+            </label>
+            <div className="modal-actions">
+              <button type="button" className="secondary-button" onClick={() => setReading(null)}>Cancel</button>
+              <button type="submit" className="primary-button" disabled={savingReading}>{savingReading ? "Saving…" : "Save reading"}</button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!detail} onOpenChange={open => { if (!open) setDetailId(null); }}>
+        <DialogContent className="life-schedule-dialog life-detail-dialog">
+          <DialogTitle>{detail?.description}</DialogTitle>
+          <DialogDescription>
+            {detail?.tail} · P/N {detail?.partNumber} · S/N {detail?.serialNumber} · installed {detail ? dateLabel(detail.installDate) : ""}
+          </DialogDescription>
+          {detail?.limits.some(limit => limit.approachingThreshold && !limit.acknowledgedBy) && (
+            <label className="life-ack-name">
+              Acknowledging as
+              <input value={actor} onChange={event => setActor(event.target.value)} placeholder="Your name" />
+            </label>
+          )}
+          <div className="life-limit-grid">
+            {detail?.limits.map(limit => (
+              <div key={limit.id} className={`life-limit-card${limit.binding ? " is-binding" : ""}`}>
+                <div className="life-limit-head">
+                  <strong>{LIMIT_LABEL[limit.limitType]}</strong>
+                  {limit.binding && <em className="life-binding-tag">Binding</em>}
+                </div>
+                <b>{Math.round(limit.usedPct)}%</b>
+                <small>used · limit {limit.limitValue.toLocaleString("en-US")} {limit.limitType === "calendar_months" ? "months" : LIMIT_SUFFIX[limit.limitType]}</small>
+                <span>{Math.round(limit.remaining).toLocaleString("en-US")} {LIMIT_SUFFIX[limit.limitType]} remaining</span>
+                <StatusPill status={limit.status} />
+                {limit.projectedDueDate && <small>Due {dateLabel(limit.projectedDueDate)}</small>}
+                {limit.approachingThreshold && (
+                  limit.acknowledgedBy ? (
+                    <small className="life-ack">Acknowledged by {limit.acknowledgedBy}</small>
+                  ) : (
+                    <button
+                      className="life-schedule"
+                      disabled={!actor.trim()}
+                      title={actor.trim() ? undefined : "Enter your name above first"}
+                      onClick={async () => {
+                        try {
+                          await acknowledgeLimit(limit.id, actor.trim());
+                          toast.success("Threshold acknowledged — recorded in the audit log.");
+                          await load();
+                        } catch (err) {
+                          toast.error(err instanceof Error ? err.message : "Failed to acknowledge.");
+                        }
+                      }}
+                    >
+                      Acknowledge
+                    </button>
+                  )
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="life-panel-note">
+            Binding = the limit with the least remaining margin (compared as % of each limit). Time-to-threshold ranking needs utilization data and comes later.
+          </p>
         </DialogContent>
       </Dialog>
     </section>

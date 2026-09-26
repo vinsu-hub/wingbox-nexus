@@ -310,8 +310,8 @@ h1 { font-family:'Space Grotesk'; font-size:25px; line-height:1.05; letter-spaci
 .life-tracking-view .life-due-soon [data-slot="progress-indicator"] { background:var(--amber); }
 .life-tracking-view .life-overdue [data-slot="progress-indicator"] { background:var(--red); }
 .life-tracking-view .life-over-limit { color:var(--red); }
-.life-tracking-view .life-schedule { display:inline-flex; align-items:center; justify-content:center; border:1px solid color-mix(in srgb,var(--blue) 45%,var(--card)); background:var(--card); color:var(--blue); padding:6px 9px; border-radius:3px; font-size:10px; cursor:pointer; text-decoration:none; white-space:nowrap; }
-.life-tracking-view .life-schedule:hover { background:var(--sky); }
+.life-tracking-view .life-schedule,.life-detail-dialog .life-schedule { display:inline-flex; align-items:center; justify-content:center; border:1px solid color-mix(in srgb,var(--blue) 45%,var(--card)); background:var(--card); color:var(--blue); padding:6px 9px; border-radius:3px; font-size:10px; cursor:pointer; text-decoration:none; white-space:nowrap; }
+.life-tracking-view .life-schedule:hover,.life-detail-dialog .life-schedule:hover { background:var(--sky); }
 .life-tracking-view .risk-ranking { list-style:none; padding:0; margin:0; }
 .life-tracking-view .risk-ranking li { display:flex; align-items:center; gap:9px; padding:11px 0; border-bottom:1px solid var(--line); }
 .life-tracking-view .risk-ranking li:last-child { border-bottom:0; }
@@ -510,3 +510,25 @@ h1 { font-family:'Space Grotesk'; font-size:25px; line-height:1.05; letter-spaci
 .import-model-error { color:var(--red); font-size:10px; margin-top:10px; }
 .spin { animation:spin 0.8s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
+/* === LIFE TRACKING (real engine) === */
+.life-component-link { display:flex; align-items:center; gap:6px; text-align:left; cursor:pointer; }
+.life-component-link:hover strong { color:var(--blue); text-decoration:underline; }
+.life-binding-tag { font-style:normal; font-size:9px; font-weight:700; color:var(--blue); background:var(--sky); border:1px solid color-mix(in srgb,var(--blue) 25%,transparent); border-radius:3px; padding:1px 5px; }
+.life-no-date { color:var(--muted); cursor:help; }
+.life-actions { display:flex; gap:6px; }
+.life-detail-dialog { width:min(640px,calc(100vw - 30px)); }
+.life-limit-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-top:6px; }
+.life-limit-card { display:flex; flex-direction:column; gap:5px; padding:12px; border:1px solid var(--line); border-radius:6px; }
+.life-limit-card.is-binding { border-color:var(--blue); box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 15%,transparent); }
+.life-limit-head { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--navy); }
+.life-limit-card b { font-family:'Space Grotesk',sans-serif; font-size:22px; color:var(--navy); }
+.life-limit-card small { color:var(--muted); font-size:10px; }
+.life-limit-card span { font-size:11px; color:var(--ink); }
+.life-limit-card .status-pill { align-self:flex-start; }
+.life-limit-card .life-schedule { align-self:flex-start; }
+.life-limit-card .life-schedule:disabled { opacity:.5; cursor:not-allowed; }
+.life-ack { color:var(--green)!important; }
+.life-ack-name { margin-top:4px; }
+.dashboard-life-alert { display:flex; align-items:center; gap:10px; margin:-8px 0 18px; padding:10px 14px; border:1px solid color-mix(in srgb,var(--amber) 40%,var(--line)); background:color-mix(in srgb,var(--amber) 8%,var(--card)); border-radius:6px; font-size:12px; color:var(--ink); }
+.dashboard-life-alert svg { color:var(--amber); flex:0 0 auto; }
+.dashboard-life-alert a { margin-left:auto; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; color:var(--blue); font-weight:600; font-size:11px; }
