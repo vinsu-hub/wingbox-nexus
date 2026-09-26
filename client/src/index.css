@@ -556,3 +556,10 @@ h1 { font-family:'Space Grotesk'; font-size:25px; line-height:1.05; letter-spaci
 .delivery-signoff .primary-button:disabled { opacity:.5; cursor:not-allowed; }
 .delivery-signed { display:flex; align-items:center; gap:6px; color:var(--green); font-size:12px; }
 .delivery-body .qc-badge { margin-top:0; }
+/* === AUTH === */
+.auth-checking { display:grid; place-items:center; min-height:100vh; color:var(--muted); font-size:12px; }
+.user-chip { cursor:pointer; text-align:left; background:transparent; }
+.user-menu { min-width:220px; }
+.user-menu [role="menuitem"] { display:flex; align-items:center; gap:8px; cursor:pointer; }
+.role-login-note { display:flex; align-items:center; justify-content:center; gap:7px; color:#7b8b9c; font-size:11px; line-height:1.4; text-align:center; }
+.login-button:disabled { opacity:.7; cursor:progress; }

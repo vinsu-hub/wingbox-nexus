@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { ROUTES } from "@/routes";
+import { useAuth } from "@/lib/auth";
 import { QcChecklistBadge } from "@/pages/QaQc/QcChecklistBadge";
 import { fetchDirectives, type ApiDirective } from "@/pages/Compliance/directivesApi";
 import {
@@ -46,7 +47,7 @@ export function DeliveryView() {
   const [draft, setDraft] = useState({ tail: aircraft[0].tail, eventType: "redelivery" as EventType, counterparty: "", targetDate: "" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<DeliveryEventDetail | null>(null);
-  const [actor, setActor] = useState("");
+  const { user } = useAuth();
   const [discrepancyText, setDiscrepancyText] = useState("");
   const [discrepancyDirective, setDiscrepancyDirective] = useState("");
   const [discrepancyFinding, setDiscrepancyFinding] = useState("");
@@ -145,7 +146,7 @@ export function DeliveryView() {
           <form onSubmit={event => {
             event.preventDefault();
             void run(async () => {
-              const created = await createEvent({ ...draft, actor: actor.trim() || "Engineer" });
+              const created = await createEvent(draft);
               setCreateOpen(false);
               setDraft(previous => ({ ...previous, counterparty: "", targetDate: "" }));
               setSelectedId(created.id);
@@ -159,7 +160,6 @@ export function DeliveryView() {
               <label>Counterparty<input required value={draft.counterparty} onChange={event => setDraft({ ...draft, counterparty: event.target.value })} placeholder="Lessor / lessee" /></label>
               <label>Target date<input required type="date" value={draft.targetDate} onChange={event => setDraft({ ...draft, targetDate: event.target.value })} /></label>
             </div>
-            <label>Created by<input value={actor} onChange={event => setActor(event.target.value)} placeholder="Your name" /></label>
             <div className="modal-actions">
               <button type="button" className="secondary-button" onClick={() => setCreateOpen(false)}>Cancel</button>
               <button type="submit" className="primary-button" disabled={busy}>Create event</button>
@@ -179,7 +179,7 @@ export function DeliveryView() {
           </DrawerHeader>
           {detail && (
             <div className="directive-drawer-body delivery-body">
-              <label className="delivery-actor">Acting as<input value={actor} onChange={event => setActor(event.target.value)} placeholder="Your name (recorded on every action)" /></label>
+              <p className="delivery-note">Actions are recorded as <strong>{user?.displayName}</strong>.</p>
 
               <section>
                 <h3>Records Checklist</h3>
@@ -202,7 +202,7 @@ export function DeliveryView() {
                         </small>
                       </div>
                       {discrepancy.status === "open" ? (
-                        <button className="secondary-button" disabled={busy || !actor.trim() || detail.status === "complete"} title={actor.trim() ? undefined : "Enter your name above"} onClick={() => void run(() => resolveDiscrepancy(discrepancy.id, actor.trim()), "Discrepancy resolved.")}>Resolve</button>
+                        <button className="secondary-button" disabled={busy || detail.status === "complete"} onClick={() => void run(() => resolveDiscrepancy(discrepancy.id), "Discrepancy resolved.")}>Resolve</button>
                       ) : (
                         <StatusPill status="Resolved" tone="green" />
                       )}
@@ -218,7 +218,6 @@ export function DeliveryView() {
                         description: discrepancyText,
                         linkedComplianceDirectiveId: discrepancyDirective || undefined,
                         linkedFindingId: discrepancyFinding || undefined,
-                        actor: actor.trim(),
                       });
                       setDiscrepancyText("");
                       setDiscrepancyDirective("");
@@ -236,7 +235,7 @@ export function DeliveryView() {
                         {FINDING_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
                       </select>
                     </div>
-                    <button type="submit" className="secondary-button" disabled={busy || !actor.trim()}>Log discrepancy</button>
+                    <button type="submit" className="secondary-button" disabled={busy}>Log discrepancy</button>
                   </form>
                 )}
               </section>
@@ -250,8 +249,8 @@ export function DeliveryView() {
                     <p className="delivery-note">
                       {signOffBlockers.length ? `Blocked: ${signOffBlockers.join(" · ")}.` : "Records checklist passed and no open discrepancies — ready for sign-off."}
                     </p>
-                    <button className="primary-button" disabled={busy || signOffBlockers.length > 0 || !actor.trim()} onClick={() => void run(() => signOffEvent(detail.id, actor.trim()), "Event signed off.")}>
-                      <FileSignature size={14} /> Sign off {detail.eventType}
+                    <button className="primary-button" disabled={busy || signOffBlockers.length > 0} onClick={() => void run(() => signOffEvent(detail.id), "Event signed off.")}>
+                      <FileSignature size={14} /> Sign off {detail.eventType} as {user?.displayName}
                     </button>
                   </>
                 )}

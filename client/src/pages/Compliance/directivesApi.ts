@@ -61,7 +61,7 @@ export async function createDirective(input: DirectiveInput): Promise<ApiDirecti
   return parseJsonOrThrow(response);
 }
 
-export async function updateDirective(id: string, input: Partial<DirectiveInput> & { actor: string }): Promise<ApiDirective> {
+export async function updateDirective(id: string, input: Partial<DirectiveInput>): Promise<ApiDirective> {
   const response = await fetch(`/api/directives/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -77,7 +77,6 @@ export interface MarkCompliedInput {
   compliedBy?: string;
   signedOffBy?: string;
   referenceDocUrl?: string;
-  actor: string;
 }
 
 export async function markCompliance(directiveId: string, input: MarkCompliedInput): Promise<ApiComplianceRecord & { warning?: string }> {

@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
 import { recordAuditEvent } from "../lib/auditLog.js";
+import { auditActor, requireRole } from "../lib/auth.js";
 
 export const QC_TEMPLATES_TABLE = "qc_checklist_templates";
 export const QC_INSTANCES_TABLE = "qc_checklist_instances";
@@ -101,7 +102,7 @@ qcRouter.get("/templates", async (req, res) => {
   }
 });
 
-qcRouter.post("/templates", async (req, res) => {
+qcRouter.post("/templates", requireRole("Admin", "QA"), async (req, res) => {
   const parsed = templateSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: zodError(parsed.error) });
@@ -239,7 +240,7 @@ qcRouter.patch("/instances/:id", async (req, res) => {
     }
 
     await recordAuditEvent({
-      actor: parsed.data.completedBy,
+      actor: auditActor(req),
       action: "qc_checklist.complete",
       entityType: "qc_checklist_instance",
       entityId: req.params.id,

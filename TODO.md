@@ -15,10 +15,15 @@ what's done, what's next, and how to pick the repo back up on a fresh machine.
 3. `pnpm install` — `onlyBuiltDependencies` in `package.json` already allowlists the native
    postinstall scripts (`@tailwindcss/oxide`, `esbuild`), so this should run non-interactively.
 4. Copy `.env.example` to `.env` and fill in the real Supabase credentials (`SUPABASE_URL`,
-   `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_DB_PASSWORD`) — **not committed,
-   get these from the project owner directly, never from git history**.
-5. `pnpm dev` — starts Vite + the Express API middleware on `http://localhost:3000`.
-6. Login with `admin` / `admin123`.
+   `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_DB_PASSWORD`) plus
+   `SEED_USER_PASSWORD` — **not committed, get these from the project owner directly, never from
+   git history**.
+5. `pnpm migrate` (no-op if the shared database is already current), then `pnpm dev` — starts
+   Vite + the Express API middleware on `http://localhost:3000`. Restart `pnpm dev` after adding
+   a new server route; the running server doesn't always hot-reload new routers.
+6. Sign in with a seeded role account — `admin@`, `engineer@`, `planner@`, `qa@`, or
+   `client@wingbox.aero` — using `SEED_USER_PASSWORD`. (`pnpm seed:users` creates/resets them;
+   `pnpm seed` loads demo data. The old `admin`/`admin123` login no longer exists.)
 7. The real A320 engine model is already persisted in Supabase Storage/Postgres (ingested via
    `POST /api/models/ingest-parts` from a curated 28-part STL kit) — `/inspection-presentation`
    should show it immediately via `GET /api/models/latest`, no re-ingestion needed. The GPU here
@@ -96,28 +101,16 @@ Built and verified (curl + full UI flow) — see `.agent-state.md`'s 2026-09-26 
 auto-created from the delivery QA/QC template, server-enforced sign-off gate, audit on every
 mutation. One completed demo event (RP-C5517 / Orix Aviation) kept.
 
-**Next: 1.7 (auth hardening).**
+### DONE: 1.7 Auth hardening
 
-### 1.7 Auth hardening (build last, on purpose)
+Built and verified (curl + live browser) — see `.agent-state.md`'s 2026-09-26 (cont'd 4) entry.
+Real Supabase Auth with server-mediated httpOnly cookie sessions (silent refresh), `profiles`
+table for roles, `requireAuth` on every API route except `/auth/*`, Client role read-only,
+directive create/edit limited to Admin/Engineer and QA template creation to Admin/QA, and the
+audit actor always taken from the session. Five demo role accounts via `pnpm seed:users`.
 
-- `0007_profiles.sql`: `profiles(id references auth.users(id), email, role
-  Engineer/Planner/QA/Admin/Client, display_name)`.
-- Mechanism — **server-mediated sessions, not a client-side Supabase Auth client** (nothing in
-  `client/src` talks to Supabase directly today). New `server/routes/auth.ts` calls
-  `signInWithPassword` using the existing service-role client, mints an httpOnly/secure/sameSite
-  session cookie (`cookie-parser` — new small dependency — for reading it server-side).
-  `requireAuth` silently calls `supabase.auth.refreshSession()` when the access token is near
-  expiry, re-issuing the cookie transparently.
-- Route guard (none exists today): `client/src/lib/auth.tsx` — `AuthProvider`/`useAuth()`
-  calling `GET /api/auth/me` on mount, wrapping the routed tree in `App.tsx` with a
-  `RequireAuth` component redirecting to `/login`. Per-role page gating stays Wave 2 (2.2).
-- Server enforcement: `server/lib/auth.ts` exports `requireAuth` middleware, applied via
-  `apiApp.use(requireAuth)` globally except `/auth/*`.
-- `LoginPage.tsx`: replace the hardcoded check with `POST /api/auth/login`
-  (`credentials:'include'`); remove/repoint the decorative "Engineer / Client / Admin login"
-  button (currently wired to the same fake check).
-- Seeding: `server/scripts/seedUsers.ts` using `supabase.auth.admin.createUser(...)` (Auth users
-  can't be created via raw SQL) — one demo account per role + matching `profiles` rows.
+**Wave 1 is complete.** Next is Wave 2 (see the brief) — per-role page gating for the Client
+portal (2.2) builds directly on the `role` already returned by `/api/auth/me`.
 
 ### 1.8 Parts Requests — flag only, no build
 

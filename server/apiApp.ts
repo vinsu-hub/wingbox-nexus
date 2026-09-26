@@ -5,12 +5,18 @@ import { directivesRouter } from "./routes/directives.js";
 import { qcRouter } from "./routes/qcChecklists.js";
 import { lifeTrackingRouter } from "./routes/lifeTracking.js";
 import { deliveryRouter } from "./routes/delivery.js";
+import { authRouter } from "./routes/auth.js";
+import { requireAuth } from "./lib/auth.js";
 
 /** Shared API app mounted both by Vite's dev middleware (vite.config.ts) and
  * the production Express server (server/index.ts), so route/body-parsing
  * setup lives in exactly one place. */
 export const apiApp = express();
 apiApp.use(express.json());
+// Only /auth/* is reachable without a session; everything mounted after
+// requireAuth needs a valid (auto-refreshed) session cookie.
+apiApp.use("/auth", authRouter);
+apiApp.use(requireAuth);
 apiApp.use("/models", modelsRouter);
 apiApp.use("/directives", directivesRouter);
 apiApp.use("/qc", qcRouter);

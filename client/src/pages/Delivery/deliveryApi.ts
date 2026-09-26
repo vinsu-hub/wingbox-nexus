@@ -56,15 +56,15 @@ const post = <T,>(url: string, body: unknown, method = "POST") =>
 export const fetchEvents = () => fetch("/api/delivery/events").then(json<DeliveryEvent[]>);
 export const fetchEvent = (id: string) => fetch(`/api/delivery/events/${id}`).then(json<DeliveryEventDetail>);
 
-export const createEvent = (input: { tail: string; eventType: EventType; counterparty: string; targetDate: string; actor: string }) =>
+export const createEvent = (input: { tail: string; eventType: EventType; counterparty: string; targetDate: string }) =>
   post<DeliveryEvent>("/api/delivery/events", input);
 
 export const raiseDiscrepancy = (
   eventId: string,
-  input: { description: string; linkedComplianceDirectiveId?: string; linkedFindingId?: string; actor: string },
+  input: { description: string; linkedComplianceDirectiveId?: string; linkedFindingId?: string },
 ) => post<{ discrepancy: Discrepancy; eventStatus: EventStatus }>(`/api/delivery/events/${eventId}/discrepancies`, input);
 
-export const resolveDiscrepancy = (id: string, actor: string) =>
-  post<{ discrepancy: Discrepancy; eventStatus: EventStatus }>(`/api/delivery/discrepancies/${id}/resolve`, { actor }, "PATCH");
+export const resolveDiscrepancy = (id: string) =>
+  post<{ discrepancy: Discrepancy; eventStatus: EventStatus }>(`/api/delivery/discrepancies/${id}/resolve`, {}, "PATCH");
 
-export const signOffEvent = (id: string, signedOffBy: string) => post<DeliveryEvent>(`/api/delivery/events/${id}/sign-off`, { signedOffBy });
+export const signOffEvent = (id: string) => post<DeliveryEvent>(`/api/delivery/events/${id}/sign-off`, {});

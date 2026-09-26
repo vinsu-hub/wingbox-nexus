@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
 import { recordAuditEvent } from "../lib/auditLog.js";
+import { auditActor, requireRole } from "../lib/auth.js";
 
 export const DIRECTIVES_TABLE = "directives";
 export const COMPLIANCE_RECORDS_TABLE = "directive_compliance_records";
@@ -28,7 +29,7 @@ const complianceRecordSchema = z.object({
   compliedBy: z.string().optional(),
   signedOffBy: z.string().optional(),
   referenceDocUrl: z.string().optional(),
-  actor: z.string().min(1),
+  actor: z.string().optional(),
 });
 
 function toDbDirective(input: z.infer<typeof directiveSchema>) {
@@ -144,7 +145,7 @@ directivesRouter.get("/:id", async (req, res) => {
   }
 });
 
-directivesRouter.post("/", async (req, res) => {
+directivesRouter.post("/", requireRole("Admin", "Engineer"), async (req, res) => {
   const parsed = directiveSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues.map(issue => issue.message).join("; ") });
@@ -179,7 +180,7 @@ const PARTIAL_FIELD_TO_COLUMN: Record<string, string> = {
   notes: "notes",
 };
 
-directivesRouter.patch("/:id", async (req, res) => {
+directivesRouter.patch("/:id", requireRole("Admin", "Engineer"), async (req, res) => {
   const parsed = directiveSchema.partial().safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues.map(issue => issue.message).join("; ") });
@@ -207,7 +208,7 @@ directivesRouter.patch("/:id", async (req, res) => {
       return;
     }
     await recordAuditEvent({
-      actor: typeof req.body.actor === "string" ? req.body.actor : "unknown",
+      actor: auditActor(req),
       action: "directive.update",
       entityType: "directive",
       entityId: req.params.id,
@@ -231,7 +232,7 @@ directivesRouter.post("/:id/compliance-records", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues.map(issue => issue.message).join("; ") });
     return;
   }
-  const { tailNumber, status, compliedDate, compliedBy, signedOffBy, referenceDocUrl, actor } = parsed.data;
+  const { tailNumber, status, compliedDate, compliedBy, signedOffBy, referenceDocUrl } = parsed.data;
   try {
     const { data: before } = await supabase
       .from(COMPLIANCE_RECORDS_TABLE)
@@ -262,7 +263,7 @@ directivesRouter.post("/:id/compliance-records", async (req, res) => {
     }
 
     await recordAuditEvent({
-      actor,
+      actor: auditActor(req),
       action: "directive.compliance_record.upsert",
       entityType: "directive_compliance_record",
       entityId: row.id,

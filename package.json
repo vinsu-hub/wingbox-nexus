@@ -10,6 +10,7 @@
     "preview": "vite preview --host",
     "migrate": "tsx server/scripts/migrate.ts",
     "seed": "tsx server/scripts/seed.ts",
+    "seed:users": "tsx server/scripts/seedUsers.ts",
     "check": "tsc --noEmit",
     "format": "prettier --write ."
   },

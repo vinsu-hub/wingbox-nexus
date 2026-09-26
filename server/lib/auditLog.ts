@@ -3,10 +3,8 @@ import { supabase } from "./supabase.js";
 export const AUDIT_EVENTS_TABLE = "audit_events";
 
 export interface AuditEventInput {
-  /** Who performed the action. A plain string for now, sourced from the
-   * same human-entered field the caller already has (e.g. `complied_by`) —
-   * once real auth (Wave 1 item 1.7) lands, call sites switch this to
-   * req.user.email. // TODO(1.7) */
+  /** Who performed the action — callers pass `auditActor(req)`, i.e. the
+   * authenticated session user, never a name typed into a form. */
   actor: string;
   action: string;
   entityType: string;

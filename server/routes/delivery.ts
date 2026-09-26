@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
 import { recordAuditEvent } from "../lib/auditLog.js";
+import { auditActor } from "../lib/auth.js";
 import { QC_INSTANCES_TABLE, QC_TEMPLATES_TABLE } from "./qcChecklists.js";
 
 export const DELIVERY_EVENTS_TABLE = "delivery_events";
@@ -14,18 +15,18 @@ const createEventSchema = z.object({
   eventType: z.enum(["delivery", "redelivery"]),
   counterparty: z.string().min(1),
   targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD"),
-  actor: z.string().min(1),
+  actor: z.string().optional(),
 });
 
 const discrepancySchema = z.object({
   description: z.string().min(1),
   linkedComplianceDirectiveId: z.string().uuid().optional(),
   linkedFindingId: z.string().min(1).optional(),
-  actor: z.string().min(1),
+  actor: z.string().optional(),
 });
 
-const resolveSchema = z.object({ actor: z.string().min(1) });
-const signOffSchema = z.object({ signedOffBy: z.string().min(1) });
+const resolveSchema = z.object({ actor: z.string().optional() });
+const signOffSchema = z.object({ signedOffBy: z.string().optional() });
 
 type EventStatus = "in_progress" | "discrepancies_open" | "complete";
 
@@ -236,7 +237,7 @@ deliveryRouter.post("/events", async (req, res) => {
     }
 
     await recordAuditEvent({
-      actor: parsed.data.actor,
+      actor: auditActor(req),
       action: "delivery_event.create",
       entityType: "delivery_event",
       entityId: event.id,
@@ -271,7 +272,7 @@ deliveryRouter.post("/events/:id/discrepancies", async (req, res) => {
         description: parsed.data.description,
         linked_compliance_directive_id: parsed.data.linkedComplianceDirectiveId ?? null,
         linked_finding_id: parsed.data.linkedFindingId ?? null,
-        raised_by: parsed.data.actor,
+        raised_by: req.user!.displayName,
       })
       .select("*, directives(reference_no, title)")
       .single();
@@ -281,7 +282,7 @@ deliveryRouter.post("/events/:id/discrepancies", async (req, res) => {
     }
     const status = await syncStatus(req.params.id);
     await recordAuditEvent({
-      actor: parsed.data.actor,
+      actor: auditActor(req),
       action: "delivery_discrepancy.raise",
       entityType: "delivery_discrepancy",
       entityId: row.id,
@@ -311,7 +312,7 @@ deliveryRouter.patch("/discrepancies/:id/resolve", async (req, res) => {
     }
     const { data: row, error } = await supabase
       .from(DISCREPANCIES_TABLE)
-      .update({ status: "resolved", resolved_by: parsed.data.actor, resolved_at: new Date().toISOString() })
+      .update({ status: "resolved", resolved_by: req.user!.displayName, resolved_at: new Date().toISOString() })
       .eq("id", req.params.id)
       .select("*, directives(reference_no, title)")
       .single();
@@ -321,7 +322,7 @@ deliveryRouter.patch("/discrepancies/:id/resolve", async (req, res) => {
     }
     const status = await syncStatus(before.delivery_event_id);
     await recordAuditEvent({
-      actor: parsed.data.actor,
+      actor: auditActor(req),
       action: "delivery_discrepancy.resolve",
       entityType: "delivery_discrepancy",
       entityId: req.params.id,
@@ -371,7 +372,7 @@ deliveryRouter.post("/events/:id/sign-off", async (req, res) => {
     const signedOffAt = new Date().toISOString();
     const { data: row, error } = await supabase
       .from(DELIVERY_EVENTS_TABLE)
-      .update({ signed_off_by: parsed.data.signedOffBy, signed_off_at: signedOffAt, status: "complete" })
+      .update({ signed_off_by: req.user!.displayName, signed_off_at: signedOffAt, status: "complete" })
       .eq("id", req.params.id)
       .select()
       .single();
@@ -380,7 +381,7 @@ deliveryRouter.post("/events/:id/sign-off", async (req, res) => {
       return;
     }
     await recordAuditEvent({
-      actor: parsed.data.signedOffBy,
+      actor: auditActor(req),
       action: "delivery_event.sign_off",
       entityType: "delivery_event",
       entityId: req.params.id,

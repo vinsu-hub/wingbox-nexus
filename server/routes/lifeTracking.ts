@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
 import { recordAuditEvent } from "../lib/auditLog.js";
+import { auditActor } from "../lib/auth.js";
 import { APPROACHING_THRESHOLD, evaluateComponent, evaluateLimit, type LimitRow } from "../lib/lifeTracking.js";
 
 export const COMPONENTS_TABLE = "components";
@@ -11,10 +12,10 @@ export const lifeTrackingRouter = Router();
 
 const readingSchema = z.object({
   currentValue: z.number().nonnegative(),
-  actor: z.string().min(1),
+  actor: z.string().optional(),
 });
 
-const acknowledgeSchema = z.object({ actor: z.string().min(1) });
+const acknowledgeSchema = z.object({ actor: z.string().optional() });
 
 interface ComponentRow {
   id: string;
@@ -141,7 +142,7 @@ lifeTrackingRouter.patch("/limits/:id", async (req, res) => {
       return;
     }
     await recordAuditEvent({
-      actor: parsed.data.actor,
+      actor: auditActor(req),
       action: "life_limit.reading_update",
       entityType: "component_life_limit",
       entityId: req.params.id,
@@ -176,21 +177,21 @@ lifeTrackingRouter.post("/limits/:id/acknowledge", async (req, res) => {
     const acknowledgedAt = new Date().toISOString();
     const { error } = await supabase
       .from(LIMITS_TABLE)
-      .update({ acknowledged_by: parsed.data.actor, acknowledged_at: acknowledgedAt })
+      .update({ acknowledged_by: req.user!.displayName, acknowledged_at: acknowledgedAt })
       .eq("id", req.params.id);
     if (error) {
       res.status(502).json({ error: `Update failed: ${error.message}` });
       return;
     }
     await recordAuditEvent({
-      actor: parsed.data.actor,
+      actor: auditActor(req),
       action: "life_limit.threshold_acknowledged",
       entityType: "component_life_limit",
       entityId: req.params.id,
       beforeState: { acknowledged_by: before.acknowledged_by, acknowledged_at: before.acknowledged_at },
-      afterState: { acknowledged_by: parsed.data.actor, acknowledged_at: acknowledgedAt, used_pct: Math.round(evaluated.usedPct) },
+      afterState: { acknowledged_by: req.user!.displayName, acknowledged_at: acknowledgedAt, used_pct: Math.round(evaluated.usedPct) },
     });
-    res.json({ ...evaluated, acknowledgedBy: parsed.data.actor, acknowledgedAt });
+    res.json({ ...evaluated, acknowledgedBy: req.user!.displayName, acknowledgedAt });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Unknown acknowledge error" });
   }

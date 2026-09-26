@@ -1,18 +1,31 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import { ArrowRight, LockKeyhole, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { BrandMark } from "@/components/layout/BrandMark";
 import { ROUTES } from "@/routes";
+import { useAuth } from "@/lib/auth";
 
 export function LoginPage() {
   const [, navigate] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const { user, login } = useAuth();
 
-  const attemptLogin = () => {
-    if (email === "admin" && password === "admin123") navigate(ROUTES.dashboard);
-    else toast.error("Invalid email or password");
+  if (user) return <Redirect to={ROUTES.dashboard} />;
+
+  const attemptLogin = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await login(email.trim(), password);
+      navigate(ROUTES.dashboard);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Sign in failed.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -27,7 +40,7 @@ export function LoginPage() {
         <label>Email address
           <div className="input-icon">
             <UserRound size={16} />
-            <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your work email" />
+            <input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your work email" />
           </div>
         </label>
         <label>Password
@@ -37,15 +50,15 @@ export function LoginPage() {
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
+              autoComplete="current-password"
               placeholder="Enter your password"
-              onKeyDown={e => e.key === "Enter" && attemptLogin()}
+              onKeyDown={e => e.key === "Enter" && void attemptLogin()}
             />
           </div>
         </label>
-        <button className="forgot" onClick={() => toast("Password reset link requested")}>Forgot password?</button>
-        <button className="primary-button login-button" onClick={attemptLogin}>Sign in <ArrowRight size={16} /></button>
-        <div className="or"><span />or<span /></div>
-        <button className="role-login" onClick={attemptLogin}><UserRound size={17} /> Engineer / Client / Admin login</button>
+        <button className="forgot" onClick={() => toast("Ask a WingBox admin to reset your password.")}>Forgot password?</button>
+        <button className="primary-button login-button" onClick={() => void attemptLogin()} disabled={submitting}>{submitting ? "Signing in…" : "Sign in"} <ArrowRight size={16} /></button>
+        <p className="role-login-note"><UserRound size={15} /> Engineer, QA, Planner, Admin and Client accounts all sign in here — your role comes from your account.</p>
       </div>
     </div>
   );

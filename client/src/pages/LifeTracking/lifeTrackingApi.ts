@@ -78,18 +78,18 @@ export const fetchComponents = (tail?: string) =>
 
 export const fetchSummary = () => fetch("/api/life-tracking/summary").then(json<LifeSummary>);
 
-export const updateReading = (limitId: string, currentValue: number, actor: string) =>
+export const updateReading = (limitId: string, currentValue: number) =>
   fetch(`/api/life-tracking/limits/${limitId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ currentValue, actor }),
+    body: JSON.stringify({ currentValue }),
   }).then(json<ApiLimit>);
 
-export const acknowledgeLimit = (limitId: string, actor: string) =>
+export const acknowledgeLimit = (limitId: string) =>
   fetch(`/api/life-tracking/limits/${limitId}/acknowledge`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ actor }),
+    body: JSON.stringify({}),
   }).then(json<ApiLimit>);
 
 export function toLifeRows(components: ApiComponent[]): LifeComponent[] {

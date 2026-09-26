@@ -29,12 +29,15 @@ ATA references, dates, inspector names) so it reads as a working system end to e
 ### Tech stack
 React 19 + Vite 7 + TypeScript, `wouter` for routing, Tailwind v4 + hand-rolled CSS custom-property
 design tokens, Framer Motion for interaction/animation, shadcn/Radix UI primitives, `sonner` for
-toasts. Backend is a small Express server (`server/`) providing a 3D-model ingestion API, backed
-by Supabase (Postgres + Storage). 3D rendering uses Three.js + `@react-three/fiber` + `@react-three/drei`.
+toasts. Backend is an Express API (`server/`, zod-validated routes per module) backed by Supabase
+(Postgres + Storage + Auth); schema lives in `supabase/migrations/` (`pnpm migrate`). 3D rendering uses Three.js + `@react-three/fiber` + `@react-three/drei`.
 
 ### Authentication
-Simple gated login — `admin` / `admin123` required to enter the app (previously a no-op that
-accepted anything).
+Real Supabase Auth. Sessions are httpOnly cookies set by the Express API (silently refreshed), so
+the browser never handles tokens. Roles (Engineer / Planner / QA / Admin / Client) live in a
+`profiles` table. Every API route except `/api/auth/*` requires a session; Client accounts are
+read-only; creating/editing directives needs Admin or Engineer; creating QA/QC templates needs
+Admin or QA. Audit entries always record the signed-in user. Demo accounts: `pnpm seed:users`.
 
 ### Fully built pages (real routes, real interactivity, not stubs)
 - **Login**
@@ -72,25 +75,34 @@ This is the most substantively "real" piece of engineering in the app so far:
   - Auto-fitting camera framing (works regardless of a model's source scale) with generous margin
     so exploded parts don't crowd the frame edge
 - Findings side panel (mock data: 3 borescope findings with severity, corrective action, AMM/SB/AD
-  references) alongside the model — not yet wired to on-model hotspots (see below).
+  references) alongside the model. On-model hotspots live on the separate Damage / 3D page.
 - Export PDF / Present to Client / Gesture Mode are intentionally stubbed (toast notifications) —
   not implemented yet.
 
-### Not yet built (nav items that exist but fall through to a generic placeholder page)
-Components, Findings, **Damage / 3D** (planned next — see `TODO.md`), Knowledge Base, QA/QC,
-Client Access, Client Reports, Users & Roles, Templates, Audit Log, System Settings.
+### Wave 1 modules backed by real data (Supabase)
+- **Damage / 3D** — findings as numbered markers on the 3D engine (findings themselves still mock)
+- **Compliance** — AD/SB directives and per-aircraft compliance records; create directives, mark
+  compliance per aircraft (warns when the same person complied and signed off)
+- **QA/QC** — checklist templates and runs (pass/fail/N-A, notes, photos), status computed
+  server-side, status badge shown on linked records
+- **Life Tracking** — components with hours/cycles/calendar limits, binding-constraint engine,
+  manual readings, threshold acknowledgment; live at-risk rollup on the Dashboard
+- **Delivery & Re-Delivery** — delivery/lease-return events with an auto-created records
+  checklist, discrepancy log, and server-enforced sign-off gate
+- **Audit log** (write-path only) — every sign-off/status change is recorded; the viewer is Wave 2
+
+### Not yet built (nav items that fall through to a generic placeholder page)
+Components, Findings, Knowledge Base, Client Access, Client Reports, Users & Roles, Templates,
+Audit Log, System Settings — all Wave 2 in the build brief.
 
 ### Known next step
-`TODO.md` has a fully-scoped implementation plan for **Damage / 3D** — a second presentation
-context for the same real engine model, differentiated by showing findings as numbered hotspot
-markers positioned directly on the 3D model surface (vs. Inspection Presentation's side-panel-only
-list), reusing the existing viewer with a small additive extension.
+Wave 2 of `~/Downloads/wingbox-nexus-build-brief-wave1-wave2.md` — see `TODO.md`.
 
 ## What's mock vs. real
 
-- **Real**: the 3D ingestion pipeline, the persisted engine model, Supabase Storage/Postgres,
-  the login gate, all routing/navigation.
-- **Mock/static**: nearly all business data (fleet roster, findings, compliance directives, life
-  tracking figures, reports, parts requests) — internally consistent but not backed by a real
-  database beyond the `models` table. No CRUD persistence for inspections, findings, reports, etc.
-  yet; actions like "Generate report" or "Schedule inspection" are toast-stub previews.
+- **Real**: authentication and roles, the 3D ingestion pipeline and persisted engine model,
+  compliance directives and records, QA/QC checklists, component life limits, delivery events,
+  and the audit log — all in Supabase, with schema tracked in `supabase/migrations/`.
+- **Still mock/static**: the fleet roster's richer fields, inspections, findings, reports, parts
+  requests, maintenance history, documents, presentations, and the Dashboard's summary cards
+  (its life-limit alert strip is live).

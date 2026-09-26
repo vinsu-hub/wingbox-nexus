@@ -72,7 +72,6 @@ export function ComplianceView({ tailNumber }: { tailNumber?: string }) {
         compliedDate: markCompliedDate || undefined,
         compliedBy: markCompliedBy || undefined,
         signedOffBy: markSignedOffBy || undefined,
-        actor: markCompliedBy || "Engineer",
       });
       if (result.warning) toast.warning(result.warning);
       toast.success(`${markingTail} marked ${markStatus} for ${selected.adSbNumber}.`);

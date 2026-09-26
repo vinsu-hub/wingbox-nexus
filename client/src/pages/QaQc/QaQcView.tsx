@@ -9,6 +9,7 @@ import { StatusPill } from "@/components/shared/StatusPill";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { QC_STATUS_TONE } from "./QcChecklistBadge";
+import { useAuth } from "@/lib/auth";
 import {
   fetchInstances,
   fetchTemplates,
@@ -63,6 +64,7 @@ export function QaQcView() {
   const [running, setRunning] = useState<QcInstance | null>(null);
   const [draft, setDraft] = useState<Record<string, Partial<QcResult>>>({});
   const [completedBy, setCompletedBy] = useState("");
+  const { user } = useAuth();
   const [uploadingItem, setUploadingItem] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -100,7 +102,7 @@ export function QaQcView() {
   const openRun = (instance: QcInstance) => {
     setRunning(instance);
     setDraft(Object.fromEntries(instance.results.map(result => [result.itemId, result])));
-    setCompletedBy(instance.completedBy ?? "");
+    setCompletedBy(instance.completedBy ?? user?.displayName ?? "");
   };
 
   const submitStart = async () => {

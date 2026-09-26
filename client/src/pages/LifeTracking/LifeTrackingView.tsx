@@ -97,7 +97,6 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
   const [loading, setLoading] = useState(true);
   const [reading, setReading] = useState<LifeComponent | null>(null);
   const [readingValue, setReadingValue] = useState("");
-  const [actor, setActor] = useState("");
   const [savingReading, setSavingReading] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -554,7 +553,7 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
               if (!reading) return;
               setSavingReading(true);
               try {
-                const updated = await updateReading(reading.id, Number(readingValue), actor.trim());
+                const updated = await updateReading(reading.id, Number(readingValue));
                 toast.success(`${reading.tail} · ${reading.component} now at ${Math.round(updated.usedPct)}% of its ${LIMIT_LABEL[reading.limitType].toLowerCase()} limit.`);
                 setReading(null);
                 await load();
@@ -569,10 +568,6 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
               Current total ({reading ? LIMIT_SUFFIX[reading.limitType] : ""})
               <input type="number" min={0} step="any" required value={readingValue} onChange={event => setReadingValue(event.target.value)} />
             </label>
-            <label>
-              Recorded by
-              <input required value={actor} onChange={event => setActor(event.target.value)} placeholder="Engineer name" />
-            </label>
             <div className="modal-actions">
               <button type="button" className="secondary-button" onClick={() => setReading(null)}>Cancel</button>
               <button type="submit" className="primary-button" disabled={savingReading}>{savingReading ? "Saving…" : "Save reading"}</button>
@@ -586,12 +581,6 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
           <DialogDescription>
             {detail?.tail} · P/N {detail?.partNumber} · S/N {detail?.serialNumber} · installed {detail ? dateLabel(detail.installDate) : ""}
           </DialogDescription>
-          {detail?.limits.some(limit => limit.approachingThreshold && !limit.acknowledgedBy) && (
-            <label className="life-ack-name">
-              Acknowledging as
-              <input value={actor} onChange={event => setActor(event.target.value)} placeholder="Your name" />
-            </label>
-          )}
           <div className="life-limit-grid">
             {detail?.limits.map(limit => (
               <div key={limit.id} className={`life-limit-card${limit.binding ? " is-binding" : ""}`}>
@@ -610,11 +599,9 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
                   ) : (
                     <button
                       className="life-schedule"
-                      disabled={!actor.trim()}
-                      title={actor.trim() ? undefined : "Enter your name above first"}
                       onClick={async () => {
                         try {
-                          await acknowledgeLimit(limit.id, actor.trim());
+                          await acknowledgeLimit(limit.id);
                           toast.success("Threshold acknowledged — recorded in the audit log.");
                           await load();
                         } catch (err) {
