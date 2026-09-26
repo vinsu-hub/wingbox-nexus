@@ -65,30 +65,17 @@ entry. `supabase/migrations/0002_audit_events.sql` applied; `server/lib/auditLog
 `recordAuditEvent(input)` (non-throwing, `actor` stays a plain string until 1.7). No call sites
 yet — 1.2/1.3/1.5/1.6 wire it in as they're built.
 
-**Next: 1.2 (Compliance real CRUD)** — first real zod and react-hook-form usage in the codebase.
+### DONE: 1.2 Compliance — real CRUD
 
-### 1.2 Compliance — real CRUD
+Built and verified end-to-end (curl + live browser) — see `.agent-state.md`'s 2026-09-26 entry.
+`supabase/migrations/0003_directives.sql` applied and seeded (95 compliance records across 12
+directives). `server/routes/directives.ts` mounted at `/api/directives`. `ComplianceView.tsx`
+now fetches real data via `directivesApi.ts`'s `toDirectiveWithAffected()` reshape; gained a
+"New Directive" button (`DirectiveForm.tsx`, first real react-hook-form + zod usage) and a
+per-aircraft "Update" mark-as-complied action. Confirmed live: create, validation errors, the
+same-person warning, and a status change propagating through the pill/summary/matrix together.
 
-- `0003_directives.sql`: `directives` (type AD/SB, reference_no, title, applicability,
-  issuing_authority, effective_date, compliance_due, status, ata_chapter, notes) +
-  `directive_compliance_records` (directive_id FK, tail_number FK → aircraft, status,
-  complied_date, complied_by, signed_off_by, reference_doc_url).
-- `server/routes/directives.ts` — follows `models.ts`'s Router/try-catch/`{data,error}`/status-
-  code conventions, but introduce **zod for the first time** (installed, unused everywhere
-  today) — a create/edit form on two related tables is exactly its use case.
-  `GET /directives` (filter by status/type/ata_chapter/tail, sort by due date),
-  `GET /directives/:id` (+ fleet-wide history), `POST`/`PATCH /directives/:id` (zod-validated),
-  `POST /directives/:id/compliance-records` (mark-as-complied — same `complied_by`/
-  `signed_off_by` returns a `warning`, never a hard block, and calls `recordAuditEvent`).
-  Mounted at `apiApp.use("/directives", directivesRouter)`.
-- `ComplianceView.tsx`: swap the mock import for a fetch, with a small client-side reshape
-  function rebuilding the `{affected: [{tail, status}]}` shape the existing render code already
-  expects — only the data-loading layer changes, not the JSX.
-- Form: new `client/src/pages/Compliance/DirectiveForm.tsx` — first real `react-hook-form` +
-  `zodResolver` usage, opened via `Dialog` (matches Life Tracking's existing schedule-dialog
-  precedent).
-- Seed: `server/scripts/seed.ts` (idempotent upserts) — aircraft rows + 50+ directive/record
-  rows, run via `pnpm seed`. Reused by 1.3 and 1.5's seed needs too.
+**Next: 1.3 (QA/QC)** — genuinely new page, no prior UI exists.
 
 ### 1.3 QA/QC (new page)
 

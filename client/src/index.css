@@ -230,6 +230,18 @@ h1 { font-family:'Space Grotesk'; font-size:25px; line-height:1.05; letter-spaci
 .directive-aircraft li { display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--line); }
 .directive-aircraft strong { color:var(--navy); font-size:11px; }
 .directive-aircraft small { display:block; color:var(--muted); font-size:10px; margin-top:3px; }
+.directive-aircraft-actions { display:flex; align-items:center; gap:8px; }
+.directive-mark-button { color:var(--blue); font-size:10px; font-weight:600; border:1px solid var(--line); border-radius:4px; padding:4px 8px; cursor:pointer; }
+.directive-mark-button:hover { background:var(--sky); }
+.compliance-header-actions { display:flex; align-items:center; gap:10px; }
+.compliance-loading { color:var(--muted); font-size:11px; margin:-8px 0 12px; }
+.directive-form-dialog { background:var(--card); color:var(--ink); border-color:var(--line); width:min(480px,calc(100vw - 30px)); }
+.directive-form-dialog [data-slot="dialog-description"] { color:var(--muted); font-size:12px; }
+.directive-form-dialog label { display:block; font-size:11px; color:var(--muted); margin-top:12px; }
+.directive-form-dialog input,.directive-form-dialog select,.directive-form-dialog textarea { display:block; width:100%; margin-top:6px; padding:9px 10px; border:1px solid var(--line); border-radius:4px; color:var(--ink); font-family:inherit; font-size:12px; }
+.directive-form-dialog textarea { resize:vertical; }
+.directive-form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.directive-form-error { display:block; color:var(--red); font-size:10px; margin-top:4px; }
 .directive-drawer-footer { padding:16px 24px; border-top:1px solid var(--line); background:var(--card); }
 .directive-drawer-footer button { display:flex; align-items:center; justify-content:center; gap:7px; }
 .directive-drawer-footer button:disabled { color:var(--blue); background:var(--sky); cursor:default; }
