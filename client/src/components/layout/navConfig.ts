@@ -1,5 +1,6 @@
 import {
   Activity,
+  Inbox,
   AlertTriangle,
   Box,
   BookOpen,
@@ -47,6 +48,7 @@ export const navGroups: NavGroup[] = [
       item("Maintenance History", History, ROUTES.maintenanceHistory),
       item("Compliance", ShieldCheck, ROUTES.compliance),
       item("Life Tracking", Activity, ROUTES.lifeTracking),
+      item("Actions", ListChecks, ROUTES.actionsTracker),
       item("Delivery & Re-Delivery", PlaneLanding, ROUTES.delivery),
       item("Documents", FileText, ROUTES.documents),
     ],
@@ -65,6 +67,7 @@ export const navGroups: NavGroup[] = [
       item("AI Assistant", Sparkles, ROUTES.aiAssistant),
       item("Technical Library", BookOpen, ROUTES.technicalLibrary),
       item("Knowledge Base", HelpCircle, ROUTES.knowledgeBase),
+      item("Review Inbox", Inbox, ROUTES.reviewInbox),
     ],
   },
   {

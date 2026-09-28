@@ -30,6 +30,8 @@ import { UsersRolesPage } from "@/pages/Admin/UsersRolesPage";
 import { TemplatesPage } from "@/pages/Admin/TemplatesPage";
 import { AuditLogPage } from "@/pages/Admin/AuditLogPage";
 import { SystemSettingsPage } from "@/pages/Admin/SystemSettingsPage";
+import { ActionsPage } from "@/pages/Actions/ActionsPage";
+import { ReviewInboxPage } from "@/pages/ReviewInbox/ReviewInboxPage";
 
 function App() {
   return (
@@ -64,6 +66,8 @@ function App() {
         <Route path="/templates" component={() => <Layout><TemplatesPage /></Layout>} />
         <Route path="/audit-log" component={() => <Layout><AuditLogPage /></Layout>} />
         <Route path="/system-settings" component={() => <Layout><SystemSettingsPage /></Layout>} />
+        <Route path="/actions" component={() => <Layout><ActionsPage /></Layout>} />
+        <Route path="/review-inbox" component={() => <Layout><ReviewInboxPage /></Layout>} />
         <Route path="/view/:slug">{params => <Layout><MissingView slug={params.slug} /></Layout>}</Route>
         <Route component={LoginPage} />
       </Switch>

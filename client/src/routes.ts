@@ -26,6 +26,8 @@ export const ROUTES = {
   usersRoles: "/users-roles",
   templates: "/templates",
   auditLog: "/audit-log",
+  actionsTracker: "/actions",
+  reviewInbox: "/review-inbox",
   systemSettings: "/system-settings",
   view: (slug: string) => `/view/${slug}`,
 } as const;
