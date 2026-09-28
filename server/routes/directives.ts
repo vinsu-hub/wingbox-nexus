@@ -3,6 +3,7 @@ import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
 import { recordAuditEvent } from "../lib/auditLog.js";
 import { auditActor, requireRole } from "../lib/auth.js";
+import { scopeQuery } from "../lib/clientScope.js";
 
 export const DIRECTIVES_TABLE = "directives";
 export const COMPLIANCE_RECORDS_TABLE = "directive_compliance_records";
@@ -82,8 +83,13 @@ function fromDbRecord(row: Record<string, unknown>) {
  * same as the mock data module it replaces did. Fleet size here is small
  * enough that fetching everything and filtering client-side (matching the
  * rest of this app's existing pages) is simpler than adding pagination. */
-directivesRouter.get("/", async (_req, res) => {
+directivesRouter.get("/", async (req, res) => {
   try {
+    // directives is global regulatory reference data (see 0008_clients.sql)
+    // and is never client-scoped; only the nested per-aircraft compliance
+    // records are. A Client-role caller sees every directive but only their
+    // own client's compliance records against it — which is exactly what
+    // "N/A-fills the rest of the matrix" already does downstream.
     const { data: directiveRows, error: directivesError } = await supabase
       .from(DIRECTIVES_TABLE)
       .select("*")
@@ -92,9 +98,10 @@ directivesRouter.get("/", async (_req, res) => {
       res.status(502).json({ error: `Lookup failed: ${directivesError.message}` });
       return;
     }
-    const { data: recordRows, error: recordsError } = await supabase
-      .from(COMPLIANCE_RECORDS_TABLE)
-      .select("*");
+    const { data: recordRows, error: recordsError } = await scopeQuery(
+      supabase.from(COMPLIANCE_RECORDS_TABLE).select("*"),
+      req.user!,
+    );
     if (recordsError) {
       res.status(502).json({ error: `Lookup failed: ${recordsError.message}` });
       return;
@@ -131,10 +138,10 @@ directivesRouter.get("/:id", async (req, res) => {
       res.status(404).json({ error: "Directive not found." });
       return;
     }
-    const { data: records, error: recordsError } = await supabase
-      .from(COMPLIANCE_RECORDS_TABLE)
-      .select("*")
-      .eq("directive_id", req.params.id);
+    const { data: records, error: recordsError } = await scopeQuery(
+      supabase.from(COMPLIANCE_RECORDS_TABLE).select("*").eq("directive_id", req.params.id),
+      req.user!,
+    );
     if (recordsError) {
       res.status(502).json({ error: `Lookup failed: ${recordsError.message}` });
       return;
@@ -234,6 +241,18 @@ directivesRouter.post("/:id/compliance-records", async (req, res) => {
   }
   const { tailNumber, status, compliedDate, compliedBy, signedOffBy, referenceDocUrl } = parsed.data;
   try {
+    // client_id is derived server-side from the aircraft, never accepted
+    // in the request body — see server/lib/clientScope.ts.
+    const { data: aircraft, error: aircraftError } = await supabase
+      .from("aircraft")
+      .select("client_id")
+      .eq("tail_number", tailNumber)
+      .maybeSingle();
+    if (aircraftError || !aircraft) {
+      res.status(400).json({ error: `Unknown aircraft: ${tailNumber}` });
+      return;
+    }
+
     const { data: before } = await supabase
       .from(COMPLIANCE_RECORDS_TABLE)
       .select("*")
@@ -247,6 +266,7 @@ directivesRouter.post("/:id/compliance-records", async (req, res) => {
         {
           directive_id: req.params.id,
           tail_number: tailNumber,
+          client_id: aircraft.client_id,
           status,
           complied_date: compliedDate || null,
           complied_by: compliedBy || null,

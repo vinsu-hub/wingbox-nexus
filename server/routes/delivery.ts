@@ -3,6 +3,7 @@ import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
 import { recordAuditEvent } from "../lib/auditLog.js";
 import { auditActor } from "../lib/auth.js";
+import { assertOwnsRow, scopeQuery, sendError } from "../lib/clientScope.js";
 import { QC_INSTANCES_TABLE, QC_TEMPLATES_TABLE } from "./qcChecklists.js";
 
 export const DELIVERY_EVENTS_TABLE = "delivery_events";
@@ -117,6 +118,7 @@ deliveryRouter.get("/events", async (req, res) => {
   try {
     let query = supabase.from(DELIVERY_EVENTS_TABLE).select("*, delivery_discrepancies(status)").order("target_date");
     if (typeof req.query.tail === "string") query = query.eq("aircraft_tail", req.query.tail);
+    query = scopeQuery(query, req.user!);
     const { data, error } = await query;
     if (error) {
       res.status(502).json({ error: `Lookup failed: ${error.message}` });
@@ -149,6 +151,7 @@ deliveryRouter.get("/events/:id", async (req, res) => {
       res.status(404).json({ error: "Delivery event not found." });
       return;
     }
+    assertOwnsRow(req.user!, event as unknown as { client_id?: string | null });
     const { data: discrepancies, error: discError } = await supabase
       .from(DISCREPANCIES_TABLE)
       .select("*, directives(reference_no, title)")
@@ -169,7 +172,7 @@ deliveryRouter.get("/events/:id", async (req, res) => {
       discrepancies: discrepancyRows.map(fromDiscrepancy),
     });
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown lookup error" });
+    sendError(res, err, "Unknown lookup error");
   }
 });
 
@@ -199,10 +202,23 @@ deliveryRouter.post("/events", async (req, res) => {
       return;
     }
 
+    // client_id is derived server-side from the aircraft, never accepted in
+    // the request body — see server/lib/clientScope.ts.
+    const { data: aircraft, error: aircraftError } = await supabase
+      .from("aircraft")
+      .select("client_id")
+      .eq("tail_number", parsed.data.tail)
+      .maybeSingle();
+    if (aircraftError || !aircraft) {
+      res.status(400).json({ error: `Unknown aircraft: ${parsed.data.tail}` });
+      return;
+    }
+
     const { data: event, error: eventError } = await supabase
       .from(DELIVERY_EVENTS_TABLE)
       .insert({
         aircraft_tail: parsed.data.tail,
+        client_id: aircraft.client_id,
         event_type: parsed.data.eventType,
         counterparty: parsed.data.counterparty,
         target_date: parsed.data.targetDate,
@@ -216,7 +232,7 @@ deliveryRouter.post("/events", async (req, res) => {
 
     const { data: instance, error: instanceError } = await supabase
       .from(QC_INSTANCES_TABLE)
-      .insert({ template_id: template.id, linked_entity_type: "delivery", linked_entity_id: event.id })
+      .insert({ template_id: template.id, linked_entity_type: "delivery", linked_entity_id: event.id, client_id: aircraft.client_id })
       .select("id, status")
       .single();
     if (instanceError) {
@@ -256,7 +272,7 @@ deliveryRouter.post("/events/:id/discrepancies", async (req, res) => {
     return;
   }
   try {
-    const { data: event } = await supabase.from(DELIVERY_EVENTS_TABLE).select("status").eq("id", req.params.id).maybeSingle();
+    const { data: event } = await supabase.from(DELIVERY_EVENTS_TABLE).select("status, client_id").eq("id", req.params.id).maybeSingle();
     if (!event) {
       res.status(404).json({ error: "Delivery event not found." });
       return;
@@ -269,6 +285,7 @@ deliveryRouter.post("/events/:id/discrepancies", async (req, res) => {
       .from(DISCREPANCIES_TABLE)
       .insert({
         delivery_event_id: req.params.id,
+        client_id: event.client_id,
         description: parsed.data.description,
         linked_compliance_directive_id: parsed.data.linkedComplianceDirectiveId ?? null,
         linked_finding_id: parsed.data.linkedFindingId ?? null,

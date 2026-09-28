@@ -5,6 +5,7 @@ import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
 import { recordAuditEvent } from "../lib/auditLog.js";
 import { auditActor, requireRole } from "../lib/auth.js";
+import { assertOwnsRow, scopeQuery, sendError } from "../lib/clientScope.js";
 
 export const QC_TEMPLATES_TABLE = "qc_checklist_templates";
 export const QC_INSTANCES_TABLE = "qc_checklist_instances";
@@ -125,6 +126,7 @@ qcRouter.get("/instances", async (req, res) => {
     let query = supabase.from(QC_INSTANCES_TABLE).select("*").order("created_at", { ascending: false });
     if (typeof req.query.linkedEntityType === "string") query = query.eq("linked_entity_type", req.query.linkedEntityType);
     if (typeof req.query.linkedEntityId === "string") query = query.eq("linked_entity_id", req.query.linkedEntityId);
+    query = scopeQuery(query, req.user!);
     const { data, error } = await query;
     if (error) {
       res.status(502).json({ error: `Lookup failed: ${error.message}` });
@@ -147,9 +149,10 @@ qcRouter.get("/instances/:id", async (req, res) => {
       res.status(404).json({ error: "Checklist not found." });
       return;
     }
+    assertOwnsRow(req.user!, data as { client_id?: string | null });
     res.json(fromInstance(data));
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown lookup error" });
+    sendError(res, err, "Unknown lookup error");
   }
 });
 
@@ -160,12 +163,25 @@ qcRouter.post("/instances", async (req, res) => {
     return;
   }
   try {
+    // client_id is derived server-side where it's resolvable (aircraft/
+    // delivery-linked instances), never accepted in the request body — see
+    // server/lib/clientScope.ts. inspection/part_request-linked instances
+    // stay null until those become real tables (same as the 0008 backfill).
+    let clientId: string | null = null;
+    if (parsed.data.linkedEntityType === "aircraft") {
+      const { data: aircraft } = await supabase.from("aircraft").select("client_id").eq("tail_number", parsed.data.linkedEntityId).maybeSingle();
+      clientId = aircraft?.client_id ?? null;
+    } else if (parsed.data.linkedEntityType === "delivery") {
+      const { data: event } = await supabase.from("delivery_events").select("client_id").eq("id", parsed.data.linkedEntityId).maybeSingle();
+      clientId = event?.client_id ?? null;
+    }
     const { data, error } = await supabase
       .from(QC_INSTANCES_TABLE)
       .insert({
         template_id: parsed.data.templateId,
         linked_entity_type: parsed.data.linkedEntityType,
         linked_entity_id: parsed.data.linkedEntityId,
+        client_id: clientId,
       })
       .select()
       .single();
@@ -175,7 +191,7 @@ qcRouter.post("/instances", async (req, res) => {
     }
     res.status(201).json(fromInstance(data));
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown insert error" });
+    sendError(res, err, "Unknown insert error");
   }
 });
 

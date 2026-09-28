@@ -9,6 +9,10 @@ export interface SessionUser {
   email: string;
   role: Role;
   displayName: string;
+  /** Which tenant this user belongs to. Populated only for role "Client" —
+   * internal staff (Engineer/Planner/QA/Admin) work across every client and
+   * have no client_id of their own. See server/lib/clientScope.ts. */
+  clientId: string | null;
 }
 
 declare global {
@@ -65,9 +69,9 @@ export function clearSessionCookies(res: Response) {
 }
 
 export async function loadProfile(userId: string, email: string): Promise<SessionUser | null> {
-  const { data, error } = await supabase.from(PROFILES_TABLE).select("role, display_name").eq("id", userId).maybeSingle();
+  const { data, error } = await supabase.from(PROFILES_TABLE).select("role, display_name, client_id").eq("id", userId).maybeSingle();
   if (error || !data) return null;
-  return { id: userId, email, role: data.role as Role, displayName: data.display_name };
+  return { id: userId, email, role: data.role as Role, displayName: data.display_name, clientId: data.client_id ?? null };
 }
 
 /** Resolves the caller from their cookies, silently refreshing an expired
@@ -103,6 +107,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
     if (user.role === "Client" && req.method !== "GET") {
       res.status(403).json({ error: "Client accounts are read-only." });
+      return;
+    }
+    if (user.role === "Client" && !user.clientId) {
+      // Fail closed: a Client-role profile with no client_id is a
+      // misconfigured account, never a signal to show every client's data.
+      res.status(403).json({ error: "This account is not linked to a client workspace." });
       return;
     }
     req.user = user;

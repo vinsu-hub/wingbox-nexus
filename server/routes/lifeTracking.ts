@@ -2,8 +2,9 @@ import { Router } from "express";
 import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
 import { recordAuditEvent } from "../lib/auditLog.js";
-import { auditActor } from "../lib/auth.js";
+import { auditActor, type SessionUser } from "../lib/auth.js";
 import { APPROACHING_THRESHOLD, evaluateComponent, evaluateLimit, type LimitRow } from "../lib/lifeTracking.js";
+import { assertOwnsRow, scopeQuery, sendError } from "../lib/clientScope.js";
 
 export const COMPONENTS_TABLE = "components";
 export const LIMITS_TABLE = "component_life_limits";
@@ -45,9 +46,10 @@ function toApiComponent(row: ComponentRow, now: Date) {
 
 const zodError = (error: z.ZodError) => error.issues.map(issue => `${issue.path.join(".") || "body"}: ${issue.message}`).join("; ");
 
-async function loadComponents(tail?: string) {
+async function loadComponents(user: SessionUser, tail?: string) {
   let query = supabase.from(COMPONENTS_TABLE).select(COMPONENT_SELECT).order("aircraft_tail").order("description");
   if (tail) query = query.eq("aircraft_tail", tail);
+  query = scopeQuery(query, user);
   const { data, error } = await query;
   if (error) throw new Error(`Lookup failed: ${error.message}`);
   const now = new Date();
@@ -59,7 +61,7 @@ async function loadComponents(tail?: string) {
  * implementation of the binding-constraint rule. */
 lifeTrackingRouter.get("/components", async (req, res) => {
   try {
-    res.json(await loadComponents(typeof req.query.tail === "string" ? req.query.tail : undefined));
+    res.json(await loadComponents(req.user!, typeof req.query.tail === "string" ? req.query.tail : undefined));
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : "Unknown lookup error" });
   }
@@ -76,17 +78,18 @@ lifeTrackingRouter.get("/components/:id", async (req, res) => {
       res.status(404).json({ error: "Component not found." });
       return;
     }
+    assertOwnsRow(req.user!, data as unknown as { client_id?: string | null });
     res.json(toApiComponent(data as ComponentRow, new Date()));
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown lookup error" });
+    sendError(res, err, "Unknown lookup error");
   }
 });
 
 /** Fleet rollup for the Dashboard: how many components' binding constraint
  * is within the approaching-threshold window, and how many are past it. */
-lifeTrackingRouter.get("/summary", async (_req, res) => {
+lifeTrackingRouter.get("/summary", async (req, res) => {
   try {
-    const components = await loadComponents();
+    const components = await loadComponents(req.user!);
     const withBinding = components.filter(component => component.bindingRemainingPct !== null);
     res.json({
       total: components.length,
@@ -123,6 +126,7 @@ lifeTrackingRouter.patch("/limits/:id", async (req, res) => {
       res.status(404).json({ error: "Limit not found." });
       return;
     }
+    assertOwnsRow(req.user!, before as unknown as { client_id?: string | null });
     if (before.limit_type === "calendar_months") {
       res.status(400).json({ error: "Calendar limits are computed from the install date and can't be edited." });
       return;
@@ -151,7 +155,7 @@ lifeTrackingRouter.patch("/limits/:id", async (req, res) => {
     });
     res.json(evaluateLimit(row as LimitRow, before.components.install_date));
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown update error" });
+    sendError(res, err, "Unknown update error");
   }
 });
 
@@ -169,6 +173,7 @@ lifeTrackingRouter.post("/limits/:id/acknowledge", async (req, res) => {
       res.status(404).json({ error: "Limit not found." });
       return;
     }
+    assertOwnsRow(req.user!, before as unknown as { client_id?: string | null });
     const evaluated = evaluateLimit(before, before.components.install_date);
     if (!evaluated.approachingThreshold) {
       res.status(400).json({ error: `Limit still has ${Math.round(evaluated.remainingPct * 100)}% life remaining — nothing to acknowledge yet.` });
@@ -193,6 +198,6 @@ lifeTrackingRouter.post("/limits/:id/acknowledge", async (req, res) => {
     });
     res.json({ ...evaluated, acknowledgedBy: req.user!.displayName, acknowledgedAt });
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : "Unknown acknowledge error" });
+    sendError(res, err, "Unknown acknowledge error");
   }
 });
