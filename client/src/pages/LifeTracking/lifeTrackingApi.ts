@@ -76,6 +76,9 @@ async function json<T>(response: Response): Promise<T> {
 export const fetchComponents = (tail?: string) =>
   fetch(`/api/life-tracking/components${tail ? `?tail=${encodeURIComponent(tail)}` : ""}`).then(json<ApiComponent[]>);
 
+export const fetchComponent = (id: string) =>
+  fetch(`/api/life-tracking/components/${encodeURIComponent(id)}`).then(json<ApiComponent>);
+
 export const fetchSummary = () => fetch("/api/life-tracking/summary").then(json<LifeSummary>);
 
 export const updateReading = (limitId: string, currentValue: number) =>
