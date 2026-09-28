@@ -6,6 +6,11 @@ import { qcRouter } from "./routes/qcChecklists.js";
 import { lifeTrackingRouter } from "./routes/lifeTracking.js";
 import { deliveryRouter } from "./routes/delivery.js";
 import { authRouter } from "./routes/auth.js";
+import { auditEventsRouter } from "./routes/auditEvents.js";
+import { usersRouter } from "./routes/users.js";
+import { settingsRouter } from "./routes/settings.js";
+import { actionsRouter } from "./routes/actions.js";
+import { reviewItemsRouter } from "./routes/reviewItems.js";
 import { requireAuth } from "./lib/auth.js";
 
 /** Shared API app mounted both by Vite's dev middleware (vite.config.ts) and
@@ -22,3 +27,8 @@ apiApp.use("/directives", directivesRouter);
 apiApp.use("/qc", qcRouter);
 apiApp.use("/life-tracking", lifeTrackingRouter);
 apiApp.use("/delivery", deliveryRouter);
+apiApp.use("/audit-events", auditEventsRouter);
+apiApp.use("/users", usersRouter);
+apiApp.use("/settings", settingsRouter);
+apiApp.use("/actions", actionsRouter);
+apiApp.use("/review-items", reviewItemsRouter);

@@ -1,12 +1,14 @@
 export type LimitType = "hours" | "cycles" | "calendar_months";
 export type LimitStatus = "Healthy" | "Due Soon" | "Overdue";
 
-/** A limit with ≤10% of its life remaining counts as "approaching threshold".
- * Fixed here for Wave 1; the brief makes it configurable in Wave 2 (System
- * Settings, item 2.7). */
+/** Defaults, used when a caller doesn't supply live settings (existing
+ * tests, or a settings-table read failure — see server/lib/settings.ts).
+ * The live values now come from the `settings` table (Foundations phase:
+ * "life-tracking Due Soon percentage (default 80), approaching threshold
+ * (default 10)") — server/routes/lifeTracking.ts fetches them once per
+ * request and threads them through evaluateComponent/evaluateLimit below,
+ * so this file stays a pure, synchronous, easily-unit-tested function. */
 export const APPROACHING_THRESHOLD = 0.1;
-/** Matches the thresholds the Life Tracking page already used for its
- * Healthy / Due Soon / Overdue pills. */
 const DUE_SOON_USED_PCT = 80;
 
 /** Calendar limits are stored in months; one average Gregorian month is used
@@ -55,11 +57,22 @@ const toIsoDate = (date: Date) => date.toISOString().slice(0, 10);
  * feed; neither exists yet, so `utilizationRatePerDay` is accepted but only
  * used to project a due date for hours/cycles when a caller supplies one.
  */
+export interface Thresholds {
+  /** Fraction (0-1) of remaining life at or below which a limit counts as
+   * "approaching threshold". Settings table stores this as a percentage
+   * (e.g. 10); callers divide by 100 before passing it in here. */
+  approachingThreshold: number;
+  dueSoonUsedPct: number;
+}
+
+export const DEFAULT_THRESHOLDS: Thresholds = { approachingThreshold: APPROACHING_THRESHOLD, dueSoonUsedPct: DUE_SOON_USED_PCT };
+
 export function evaluateLimit(
   row: LimitRow,
   installDate: string,
   now: Date = new Date(),
   utilizationRatePerDay?: number,
+  thresholds: Thresholds = DEFAULT_THRESHOLDS,
 ): Omit<EvaluatedLimit, "binding"> {
   const limitValue = Number(row.limit_value);
   let usedValue: number;
@@ -82,7 +95,7 @@ export function evaluateLimit(
 
   const usedPct = (usedValue / limitValue) * 100;
   const remainingPct = 1 - usedValue / limitValue;
-  const status: LimitStatus = usedPct >= 100 ? "Overdue" : usedPct >= DUE_SOON_USED_PCT ? "Due Soon" : "Healthy";
+  const status: LimitStatus = usedPct >= 100 ? "Overdue" : usedPct >= thresholds.dueSoonUsedPct ? "Due Soon" : "Healthy";
 
   return {
     id: row.id,
@@ -95,7 +108,7 @@ export function evaluateLimit(
     status,
     projectedDueDate,
     editable: row.limit_type !== "calendar_months",
-    approachingThreshold: remainingPct <= APPROACHING_THRESHOLD,
+    approachingThreshold: remainingPct <= thresholds.approachingThreshold,
     lastUpdated: row.last_updated,
     acknowledgedBy: row.acknowledged_by,
     acknowledgedAt: row.acknowledged_at,
@@ -104,8 +117,8 @@ export function evaluateLimit(
 
 /** Evaluates every limit on a component and flags the binding one: whichever
  * has the lowest remaining margin reaches its limit first. */
-export function evaluateComponent(limits: LimitRow[], installDate: string, now: Date = new Date()) {
-  const evaluated = limits.map(limit => evaluateLimit(limit, installDate, now));
+export function evaluateComponent(limits: LimitRow[], installDate: string, now: Date = new Date(), thresholds: Thresholds = DEFAULT_THRESHOLDS) {
+  const evaluated = limits.map(limit => evaluateLimit(limit, installDate, now, undefined, thresholds));
   const binding = evaluated.reduce<(typeof evaluated)[number] | undefined>(
     (lowest, limit) => (!lowest || limit.remainingPct < lowest.remainingPct ? limit : lowest),
     undefined,

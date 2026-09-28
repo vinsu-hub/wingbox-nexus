@@ -3,8 +3,17 @@ import { z } from "zod";
 import { supabase } from "../lib/supabase.js";
 import { recordAuditEvent } from "../lib/auditLog.js";
 import { auditActor, type SessionUser } from "../lib/auth.js";
-import { APPROACHING_THRESHOLD, evaluateComponent, evaluateLimit, type LimitRow } from "../lib/lifeTracking.js";
+import { evaluateComponent, evaluateLimit, type LimitRow, type Thresholds } from "../lib/lifeTracking.js";
 import { assertOwnsRow, scopeQuery, sendError } from "../lib/clientScope.js";
+import { getLifeTrackingThresholds } from "../lib/settings.js";
+
+/** Live settings -> the pure evaluate*() functions' Thresholds shape.
+ * Percentages in the settings table (10, 80) become the fraction/percent
+ * units evaluateLimit expects (0.1, 80). */
+async function loadThresholds(): Promise<Thresholds> {
+  const { approachingThresholdPct, dueSoonUsedPct } = await getLifeTrackingThresholds();
+  return { approachingThreshold: approachingThresholdPct / 100, dueSoonUsedPct };
+}
 
 export const COMPONENTS_TABLE = "components";
 export const LIMITS_TABLE = "component_life_limits";
@@ -31,7 +40,7 @@ interface ComponentRow {
 
 const COMPONENT_SELECT = "*, component_life_limits(*)";
 
-function toApiComponent(row: ComponentRow, now: Date) {
+function toApiComponent(row: ComponentRow, now: Date, thresholds: Thresholds) {
   return {
     id: row.id,
     tail: row.aircraft_tail,
@@ -40,28 +49,31 @@ function toApiComponent(row: ComponentRow, now: Date) {
     description: row.description,
     ataChapter: row.ata_chapter,
     installDate: row.install_date,
-    ...evaluateComponent(row.component_life_limits, row.install_date, now),
+    ...evaluateComponent(row.component_life_limits, row.install_date, now, thresholds),
   };
 }
 
 const zodError = (error: z.ZodError) => error.issues.map(issue => `${issue.path.join(".") || "body"}: ${issue.message}`).join("; ");
 
-async function loadComponents(user: SessionUser, tail?: string) {
+async function loadComponents(user: SessionUser, thresholds: Thresholds, tail?: string) {
   let query = supabase.from(COMPONENTS_TABLE).select(COMPONENT_SELECT).order("aircraft_tail").order("description");
   if (tail) query = query.eq("aircraft_tail", tail);
   query = scopeQuery(query, user);
   const { data, error } = await query;
   if (error) throw new Error(`Lookup failed: ${error.message}`);
   const now = new Date();
-  return (data as ComponentRow[]).map(row => toApiComponent(row, now));
+  return (data as ComponentRow[]).map(row => toApiComponent(row, now, thresholds));
 }
 
 /** Components with every limit evaluated and the binding constraint flagged.
  * Evaluation happens here, not in the client, so there's exactly one
- * implementation of the binding-constraint rule. */
+ * implementation of the binding-constraint rule. Thresholds are read live
+ * from System Settings on every request — changing the Due Soon/approaching
+ * percentage there takes effect immediately, no redeploy. */
 lifeTrackingRouter.get("/components", async (req, res) => {
   try {
-    res.json(await loadComponents(req.user!, typeof req.query.tail === "string" ? req.query.tail : undefined));
+    const thresholds = await loadThresholds();
+    res.json(await loadComponents(req.user!, thresholds, typeof req.query.tail === "string" ? req.query.tail : undefined));
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : "Unknown lookup error" });
   }
@@ -79,7 +91,8 @@ lifeTrackingRouter.get("/components/:id", async (req, res) => {
       return;
     }
     assertOwnsRow(req.user!, data as unknown as { client_id?: string | null });
-    res.json(toApiComponent(data as ComponentRow, new Date()));
+    const thresholds = await loadThresholds();
+    res.json(toApiComponent(data as ComponentRow, new Date(), thresholds));
   } catch (err) {
     sendError(res, err, "Unknown lookup error");
   }
@@ -89,12 +102,13 @@ lifeTrackingRouter.get("/components/:id", async (req, res) => {
  * is within the approaching-threshold window, and how many are past it. */
 lifeTrackingRouter.get("/summary", async (req, res) => {
   try {
-    const components = await loadComponents(req.user!);
+    const thresholds = await loadThresholds();
+    const components = await loadComponents(req.user!, thresholds);
     const withBinding = components.filter(component => component.bindingRemainingPct !== null);
     res.json({
       total: components.length,
-      threshold: APPROACHING_THRESHOLD,
-      approaching: withBinding.filter(c => c.bindingRemainingPct! > 0 && c.bindingRemainingPct! <= APPROACHING_THRESHOLD).length,
+      threshold: thresholds.approachingThreshold,
+      approaching: withBinding.filter(c => c.bindingRemainingPct! > 0 && c.bindingRemainingPct! <= thresholds.approachingThreshold).length,
       overdue: withBinding.filter(c => c.bindingRemainingPct! <= 0).length,
     });
   } catch (err) {
@@ -153,7 +167,7 @@ lifeTrackingRouter.patch("/limits/:id", async (req, res) => {
       beforeState: { current_value: before.current_value, component: before.components.description, tail: before.components.aircraft_tail },
       afterState: { current_value: row.current_value },
     });
-    res.json(evaluateLimit(row as LimitRow, before.components.install_date));
+    res.json(evaluateLimit(row as LimitRow, before.components.install_date, new Date(), undefined, await loadThresholds()));
   } catch (err) {
     sendError(res, err, "Unknown update error");
   }
@@ -174,7 +188,7 @@ lifeTrackingRouter.post("/limits/:id/acknowledge", async (req, res) => {
       return;
     }
     assertOwnsRow(req.user!, before as unknown as { client_id?: string | null });
-    const evaluated = evaluateLimit(before, before.components.install_date);
+    const evaluated = evaluateLimit(before, before.components.install_date, new Date(), undefined, await loadThresholds());
     if (!evaluated.approachingThreshold) {
       res.status(400).json({ error: `Limit still has ${Math.round(evaluated.remainingPct * 100)}% life remaining — nothing to acknowledge yet.` });
       return;
