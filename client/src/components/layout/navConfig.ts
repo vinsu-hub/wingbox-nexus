@@ -43,7 +43,7 @@ export const navGroups: NavGroup[] = [
     label: "AIRCRAFT",
     items: [
       item("Fleet", Plane, ROUTES.fleet),
-      item("Components", Box),
+      item("Components", Box, ROUTES.components),
       item("Maintenance History", History, ROUTES.maintenanceHistory),
       item("Compliance", ShieldCheck, ROUTES.compliance),
       item("Life Tracking", Activity, ROUTES.lifeTracking),
@@ -55,7 +55,7 @@ export const navGroups: NavGroup[] = [
     label: "INSPECTIONS",
     items: [
       item("Inspections", ClipboardCheck, ROUTES.inspections),
-      item("Findings", AlertTriangle),
+      item("Findings", AlertTriangle, ROUTES.findings),
       item("Damage / 3D", Box, ROUTES.damage3d),
     ],
   },
@@ -64,7 +64,7 @@ export const navGroups: NavGroup[] = [
     items: [
       item("AI Assistant", Sparkles, ROUTES.aiAssistant),
       item("Technical Library", BookOpen, ROUTES.technicalLibrary),
-      item("Knowledge Base", HelpCircle),
+      item("Knowledge Base", HelpCircle, ROUTES.knowledgeBase),
     ],
   },
   {
@@ -84,17 +84,17 @@ export const navGroups: NavGroup[] = [
   {
     label: "CLIENT PORTAL",
     items: [
-      item("Client Access", UsersRound),
-      item("Client Reports", FileText),
+      item("Client Access", UsersRound, ROUTES.clientAccess),
+      item("Client Reports", FileText, ROUTES.clientReports),
     ],
   },
   {
     label: "ADMIN",
     items: [
-      item("Users & Roles", UsersRound),
-      item("Templates", FileText),
-      item("Audit Log", History),
-      item("System Settings", Settings),
+      item("Users & Roles", UsersRound, ROUTES.usersRoles),
+      item("Templates", FileText, ROUTES.templates),
+      item("Audit Log", History, ROUTES.auditLog),
+      item("System Settings", Settings, ROUTES.systemSettings),
     ],
   },
 ];
