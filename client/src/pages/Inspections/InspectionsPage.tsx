@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useEffect, useState } from "react";
 import {
   AnimatePresence,
@@ -214,6 +215,7 @@ export function InspectionsPage() {
 
   return (
     <div className="inspections-page">
+      <DemoDataBadge variant="page" />
       <div className="page-heading">
         <div>
           <div className="eyebrow">

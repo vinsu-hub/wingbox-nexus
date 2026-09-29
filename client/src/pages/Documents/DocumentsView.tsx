@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 // STUB — Codex task builds the full Documents view per spec 3.7 and
 // "documents tab.jpg". This file is owned exclusively by that task.
 // Dual-use: standalone at /documents AND embedded as the Aircraft Record
@@ -5,6 +6,7 @@
 export function DocumentsView({ tailNumber }: { tailNumber?: string }) {
   return (
     <div className="module-view">
+      <DemoDataBadge variant="page" />
       <h1>Documents{tailNumber ? ` — ${tailNumber}` : ""}</h1>
       <p>Documents workspace is under construction.</p>
     </div>

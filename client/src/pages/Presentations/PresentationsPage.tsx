@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useEffect, useMemo, useState } from "react";
 import { animate, motion, useAnimate, useReducedMotion } from "framer-motion";
 import { BarChart3, ChevronRight, Eye, FileText, LayoutTemplate, Plus, Presentation as PresentationIcon, Share2, Users } from "lucide-react";
@@ -59,6 +60,7 @@ export function PresentationsPage() {
       <div className="presentations-layout">
         <main className="presentations-main">
           <div className="presentations-breadcrumb">Reports <span>/</span> Presentations</div>
+          <DemoDataBadge variant="page" />
           <div className="page-heading"><div><h1>Presentations</h1><p>Create, manage, and share professional presentations for maintenance, compliance, and operations.</p></div></div>
           <SummaryCardRow cards={[
             { icon: PresentationIcon, label: "Total Presentations", value: String(Math.round(presentations.length * countProgress)), trend: "↑ 12%" },

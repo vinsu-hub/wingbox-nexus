@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Box, CheckCircle2, Clock3 } from "lucide-react";
 import { Link } from "wouter";
@@ -38,6 +39,7 @@ export function ComponentsPage() {
     { key: "health", header: "Binding health", render: c => <StatusPill status={c.bindingStatus ?? "No limits"} /> },
   ];
   return <section className="components-page">
+    <DemoDataBadge variant="page" note="Seeded demo client records." />
     <header className="page-heading"><div><div className="eyebrow">AIRCRAFT / COMPONENTS</div><h1>Components</h1><p>One fleet inventory. Every life limit, with the binding constraint in focus.</p></div><button className="secondary-button" onClick={load} disabled={loading}>Refresh</button></header>
     <SummaryCardRow cards={[
       { icon: Box, label: "Tracked components", value: loading ? "—" : String(components.length), foot: `${new Set(components.map(c => c.tail)).size} aircraft`, tone: "blue" },
@@ -52,7 +54,7 @@ export function ComponentsPage() {
         <button className="components-page-reset" onClick={() => { setQuery(""); setTail(""); setAta(""); setStatus(""); }}>Reset</button>
       </>} footer={<div className="table-footer">Showing {rows.length} of {components.length} components · Live life-tracking data</div>} />
     </div>
-    <Dialog open={selectedId !== null} onOpenChange={open => { if (!open) setSelectedId(null); }}><DialogContent className="components-page-detail"><DialogTitle>{detail?.description ?? "Component detail"}</DialogTitle><DialogDescription>{detail ? `${detail.tail} · P/N ${detail.partNumber} · S/N ${detail.serialNumber}` : "Retrieving the latest component and life limits."}</DialogDescription>
+    <Dialog open={selectedId !== null} onOpenChange={open => { if (!open) setSelectedId(null); }}><DialogContent className="components-page-detail"><DialogTitle>{detail?.description ?? "Component detail"}</DialogTitle>{detail && <DemoDataBadge variant="inline" />}<DialogDescription>{detail ? `${detail.tail} · P/N ${detail.partNumber} · S/N ${detail.serialNumber}` : "Retrieving the latest component and life limits."}</DialogDescription>
       {detailError ? <p role="alert">{detailError}</p> : !detail ? <p role="status">Loading component…</p> : <>
         <div className="components-page-meta"><span>ATA <strong>{detail.ataChapter ?? "Unassigned"}</strong></span><span>Installed <strong>{detail.installDate}</strong></span><StatusPill status={detail.bindingStatus ?? "No limits"} /></div>
         <p className="components-page-note">The highlighted binding limit is the constraint reached first, as evaluated by the server. Calendar usage is in months; remaining calendar life is in days.</p>

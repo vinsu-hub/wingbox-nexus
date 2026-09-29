@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useEffect, useState } from "react";
 import { animate, motion, useAnimate, useReducedMotion } from "framer-motion";
 import {
@@ -243,6 +244,7 @@ export function ReportsPage() {
           <div className="reports-breadcrumb">
             Reports <span>/</span> Report
           </div>
+          <DemoDataBadge variant="page" />
           <div className="page-heading">
             <div>
               <h1>Reports</h1>

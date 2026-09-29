@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,
@@ -287,6 +288,7 @@ export function LifeTrackingView({ tailNumber }: { tailNumber?: string }) {
   ];
   return (
     <section className="life-tracking-view">
+      <DemoDataBadge variant="page" note="Seeded demo client records." />
       <div className="page-heading">
         <div>
           <div className="eyebrow">AIRCRAFT / LIFE TRACKING</div>

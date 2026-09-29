@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { AlertTriangle, CheckCircle2, ClipboardCheck, FileSignature, PlaneLanding, Plus, X } from "lucide-react";
@@ -104,6 +105,7 @@ export function DeliveryView() {
 
   return (
     <section className="delivery-view" aria-label="Aircraft delivery and redelivery">
+      <DemoDataBadge variant="page" note="Seeded demo client records." />
       <header className="page-heading">
         <div>
           <div className="eyebrow"><PlaneLanding size={13} /> AIRCRAFT / DELIVERY</div>
@@ -174,6 +176,7 @@ export function DeliveryView() {
             <DrawerClose className="directive-close" aria-label="Close event details"><X size={18} /></DrawerClose>
             <span className="eyebrow">{detail ? EVENT_TYPE_LABEL[detail.eventType].toUpperCase() : "DELIVERY EVENT"}</span>
             <DrawerTitle>{detail ? `${detail.tail} · ${detail.counterparty}` : "Loading…"}</DrawerTitle>
+            {detail && <DemoDataBadge variant="inline" />}
             <DrawerDescription>{detail && `Target ${dateLabel(detail.targetDate)}`}</DrawerDescription>
             {detail && <div className="directive-badges"><StatusPill status={EVENT_STATUS_LABEL[detail.status]} tone={STATUS_TONE[detail.status]} /></div>}
           </DrawerHeader>

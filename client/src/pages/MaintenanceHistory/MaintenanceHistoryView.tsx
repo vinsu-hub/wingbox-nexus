@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useState } from "react";
 import { Link } from "wouter";
 import { CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, Download, FileText, Plane, RotateCcw, ShieldCheck, SlidersHorizontal, Wrench } from "lucide-react";
@@ -57,6 +58,7 @@ export function MaintenanceHistoryView({ tailNumber }: { tailNumber?: string }) 
 
   return (
     <section className="maintenance-history-view" aria-label="Maintenance history">
+      <DemoDataBadge variant="page" />
       <header className="page-heading maintenance-history-heading">
         <div>
           {!tailNumber && <div className="eyebrow"><Plane size={13} /> AIRCRAFT / MAINTENANCE HISTORY</div>}

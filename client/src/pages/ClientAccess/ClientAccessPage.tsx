@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useState } from "react";
 import { CheckCircle2, HelpCircle, MessageSquareText, Search, X } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ export function ClientAccessPage() {
   const openQuestion = (request: PartRequest) => { setSelected(request); setQuestion(""); setQuestionOpen(true); };
   return (
     <section className="client-access-page">
+      <DemoDataBadge variant="page" />
       <header className="client-identity"><div className="client-monogram">SA</div><div><span className="eyebrow">CLIENT PORTAL / PRIVATE WORKSPACE</span><h1>{clientName}</h1><p>Your parts requests, from request to fulfillment.</p></div><span className="client-scope"><CheckCircle2 size={15} /> Client view</span></header>
       <div className="client-access-intro"><div><h2>Parts requests</h2><p>Track your submitted requests and contact the parts team about a specific item.</p></div><span>{clientRequests.length} requests in your workspace</span></div>
       <div className="parts-toolbar"><label><Search size={16} /><input aria-label="Search client requests" placeholder="Search part, P/N, or request…" value={query} onChange={event => setQuery(event.target.value)} /></label><span>{visible.length} shown</span></div>

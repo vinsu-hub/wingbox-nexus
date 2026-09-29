@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useState } from "react";
 import { AlertTriangle, CheckCircle2, ClipboardList, ShieldAlert } from "lucide-react";
 import { Link } from "wouter";
@@ -15,6 +16,7 @@ export function FindingsPage() {
   const visible = findings.filter(f => (!tail || f.tail === tail) && (!ata || f.ataChapter === ata) && (!severity || f.severity === severity) && (!status || f.status === status) && `${f.id} ${f.title} ${f.tail} ${f.inspectionId} ${f.partName}`.toLowerCase().includes(query.toLowerCase()));
   const selected = visible.find(f => f.id === selectedId) ?? visible[0];
   return <section className="findings-page">
+    <DemoDataBadge variant="page" />
     <header className="page-heading"><div><div className="eyebrow">INSPECTIONS / FINDINGS</div><h1>Findings</h1><p>Review inspection observations and corrective actions across your fleet.</p></div><span className="findings-page-demo">Fleet demonstration data</span></header>
     <SummaryCardRow cards={[
       { icon: ClipboardList, label: "Total findings", value: String(findings.length), foot: `${new Set(findings.map(f => f.tail)).size} aircraft`, tone: "blue" },
@@ -30,7 +32,7 @@ export function FindingsPage() {
       <button className="components-page-reset" onClick={() => { setQuery(""); setTail(""); setAta(""); setSeverity(""); setStatus(""); }}>Reset</button>
     </div>
     <div className="findings-page-layout"><div className="panel findings-page-list"><div className="components-page-panel-heading"><h2>Fleet findings</h2><span>{visible.length} of {findings.length} findings</span></div><div className="findings-list">{visible.map(f => <button key={f.id} className={`finding-row ${selected?.id === f.id ? "selected" : ""}`} aria-pressed={selected?.id === f.id} onClick={() => setSelectedId(f.id)}><span className="finding-number">{String(f.number).padStart(2, "0")}</span><span className="finding-row-copy"><strong>{f.title}</strong><small>{f.tail} · {f.ataSection} · {f.status}</small><small>{f.inspectionId} · {f.location}</small></span><StatusPill status={f.severity} /></button>)}</div>{!visible.length && <p className="table-empty">No findings match your filters.</p>}</div>
-      {selected ? <article className="finding-detail findings-page-detail"><div className="finding-detail-heading"><div><span>Selected finding · {selected.id}</span><h3>{selected.title}</h3></div><StatusPill status={selected.status} /></div>
+      {selected ? <article className="finding-detail findings-page-detail"><div className="finding-detail-heading"><div><span>Selected finding · {selected.id}</span><h3>{selected.title}</h3><DemoDataBadge variant="inline" /></div><StatusPill status={selected.status} /></div>
         <div className="findings-page-context"><Link href={`/fleet/${selected.tail}`}>{selected.tail}</Link><span>{selected.inspectionId}</span><small>{selected.checkType}</small></div>
         <div className="finding-detail-section"><h4>Location & component</h4><p>{selected.location}<br />{selected.partName} · {selected.ataSection}</p></div>
         <div className="finding-detail-section"><h4>Description</h4><p>{selected.description}</p></div><div className="finding-detail-section"><h4>Corrective Action</h4><p>{selected.correctiveAction}</p></div>
