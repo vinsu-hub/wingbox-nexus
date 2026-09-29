@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "wouter";
 import {
@@ -89,6 +90,7 @@ export function AiAssistantPage() {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); submitQuestion(draft); };
 
   return <section className="ai-assistant-page">
+    <DemoDataBadge variant="page" />
     <header className="ai-assistant-heading">
       <div><div className="eyebrow">TECHNICAL / AI ASSISTANT</div><h1>AI Assistant</h1><p>Explore maintenance questions, fleet records, and compliance examples.</p></div>
       <span className="ai-assistant-demo-label"><Sparkles size={13} /> Scripted demo · sample data</span>

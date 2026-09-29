@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useState } from "react";
 import { Link, useParams } from "wouter";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -27,10 +28,11 @@ export function AircraftRecordPage() {
   return (
     <div className="aircraft-record-page">
       <p className="aircraft-record-breadcrumb">Aircraft / Fleet / Aircraft Record</p>
+      <DemoDataBadge variant="page" />
       <header className="aircraft-record-header">
         <img src="/assets/wingbox-aircraft-hero.jpg" alt="Aircraft on the apron" />
         <div className="aircraft-record-identity">
-          <div><h1>{record.tail}</h1><StatusPill status={record.status} /></div>
+          <div><h1>{record.tail}</h1><DemoDataBadge variant="inline" /><StatusPill status={record.status} /></div>
           <p>{record.type}<span>·</span>{record.client}</p>
         </div>
         {backLink}

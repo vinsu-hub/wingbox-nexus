@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -45,6 +46,7 @@ export function FleetPage() {
 
   return (
     <>
+      <DemoDataBadge variant="page" />
       <div className="page-heading">
         <div>
           <div className="eyebrow"><Plane size={16} /> AIRCRAFT / FLEET</div>
@@ -94,7 +96,7 @@ export function FleetPage() {
                 {filtered.map(row => (
                   <tr key={row.tail} className={selected.tail === row.tail ? "selected-row" : ""} onClick={() => navigate(ROUTES.aircraftRecord(row.tail))}>
                     <td className="check-cell"><input type="checkbox" onClick={e => e.stopPropagation()} /></td>
-                    <td><div className="tail-cell"><span className={`aircraft-dot ${row.dot}`} /> <strong>{row.tail}</strong></div></td>
+                    <td><div className="tail-cell"><span className={`aircraft-dot ${row.dot}`} /> <strong>{row.tail}</strong><DemoDataBadge variant="inline" /></div></td>
                     <td>{row.type}</td>
                     <td>{row.client}</td>
                     <td>{row.hours}</td>

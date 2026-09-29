@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useState } from "react";
 import { ArrowRight, BookOpen, ChevronRight, FileQuestion, Search, X } from "lucide-react";
 import { knowledgeArticles, knowledgeCategories, type KnowledgeArticle, type KnowledgeCategory } from "@/data/mock/knowledge-base";
@@ -17,6 +18,7 @@ export function KnowledgeBasePage() {
 
   return (
     <section className="kb-page">
+      <DemoDataBadge variant="page" />
       <header className="kb-hero">
         <div className="kb-hero-copy">
           <span className="eyebrow">SUPPORT / KNOWLEDGE BASE</span>

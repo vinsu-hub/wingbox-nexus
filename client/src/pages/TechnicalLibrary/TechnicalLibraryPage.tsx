@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useState } from "react";
 import {
   ArrowRight,
@@ -169,6 +170,7 @@ export function TechnicalLibraryPage() {
           <div className="technical-breadcrumb">
             Technical <span>/</span> Technical Library
           </div>
+          <DemoDataBadge variant="page" />
           <div className="page-heading">
             <div>
               <h1>Technical Library</h1>

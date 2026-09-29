@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Box, Compass, Download, Expand, FileText, Hand, Maximize2, Minus, MousePointer2, Presentation, Rotate3D, Upload, ZoomIn } from "lucide-react";
@@ -95,6 +96,7 @@ export function InspectionPresentationPage() {
   return (
     <div className="inspection-presentation-page">
       <div className="inspection-presentation-breadcrumb">Reports <span>/</span> Presentations <span>/</span> {inspectionMeta.inspectionId}</div>
+      <DemoDataBadge variant="page" />
       <header className="inspection-presentation-header">
         <div><h1>Inspection Presentation</h1><p>{inspectionMeta.tail} <span>·</span> {inspectionMeta.checkType} <span>·</span> {inspectionMeta.date} <span>·</span> Inspector: {inspectionMeta.inspector}</p></div>
         <div className="inspection-presentation-actions">

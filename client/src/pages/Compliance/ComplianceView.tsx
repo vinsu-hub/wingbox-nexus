@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { AlertTriangle, BookOpen, Check, CheckCircle2, Clock3, FileText, Plus, Search, ShieldCheck, X } from "lucide-react";
@@ -89,6 +90,7 @@ export function ComplianceView({ tailNumber }: { tailNumber?: string }) {
 
   return (
     <section className="compliance-view" aria-label="Compliance tracking">
+      <DemoDataBadge variant="page" note="Seeded demo client records." />
       <header className="page-heading">
         <div>
           {!tailNumber && <div className="eyebrow"><ShieldCheck size={13} /> AIRCRAFT / COMPLIANCE</div>}

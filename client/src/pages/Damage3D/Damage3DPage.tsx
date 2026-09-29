@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useEffect, useRef, useState } from "react";
 import { Box, Compass, Download, Expand, Hand, Maximize2, Minus, MousePointer2, Presentation, Rotate3D, ZoomIn } from "lucide-react";
 import { toast } from "sonner";
@@ -87,6 +88,7 @@ export function Damage3DPage() {
   return (
     <div className="damage3d-page">
       <div className="damage3d-breadcrumb">Inspections <span>/</span> Damage / 3D</div>
+      <DemoDataBadge variant="page" note="Seeded demo client records." />
       <header className="damage3d-header">
         <div><h1>Damage / 3D</h1><p>{damage3dMeta.tail} <span>·</span> {damage3dMeta.checkType} <span>·</span> {damage3dMeta.date} <span>·</span> Inspector: {damage3dMeta.inspector}</p></div>
         <div className="damage3d-actions">

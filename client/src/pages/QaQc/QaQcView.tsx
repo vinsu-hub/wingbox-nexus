@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ClipboardList, Clock3, ImagePlus, ListChecks, Play, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -158,6 +159,7 @@ export function QaQcView() {
 
   return (
     <section className="qaqc-view" aria-label="QA/QC checklists">
+      <DemoDataBadge variant="page" note="Seeded demo client records." />
       <header className="page-heading">
         <div>
           <div className="eyebrow"><ListChecks size={13} /> PROCUREMENT / QUALITY</div>

@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useState } from "react";
 import { Plus, X, FileText, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ export function PartsRequestsPage() {
   };
   return (
     <section className="parts-page">
+      <DemoDataBadge variant="page" />
       <header className="page-heading">
         <div>
           <div className="eyebrow">PROCUREMENT / PARTS</div>

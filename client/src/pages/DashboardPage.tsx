@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import {
   AlertTriangle,
   ArrowRight,
@@ -44,6 +45,7 @@ function LifeLimitAlert() {
 export function DashboardPage() {
   return (
     <>
+      <DemoDataBadge variant="page" />
       <div className="page-heading">
         <div>
           <div className="eyebrow"><LayoutDashboard size={16} /> OPERATIONS / OVERVIEW</div>

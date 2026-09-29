@@ -1,3 +1,4 @@
+import { DemoDataBadge } from "@/components/DemoDataBadge";
 import { useState } from "react";
 import { Eye, FileBarChart2, FileText, Search, Share2 } from "lucide-react";
 import { aircraft } from "@/data/aircraft";
@@ -17,6 +18,7 @@ export function ClientReportsPage() {
     `${report.name} ${report.id} ${report.client} ${report.tail} ${report.type}`.toLowerCase().includes(query.trim().toLowerCase())
   );
   return <section className="client-reports-page">
+    <DemoDataBadge variant="page" />
     <header className="page-heading"><div><span className="eyebrow">CLIENT PORTAL / DISTRIBUTION</span><h1>Client Reports</h1><p>Reports shared with clients, with a clear record of who has viewed them.</p></div></header>
     <div className="client-report-stats"><div><span className="client-stat-icon"><Share2 size={18} /></span><span>Reports shared</span><strong>{clientReports.length}</strong><small>Across {clients.length} client workspaces</small></div><div><span className="client-stat-icon"><Eye size={18} /></span><span>Viewed</span><strong>{clientReports.filter(report => report.status === "Viewed").length}</strong><small>Opened by clients</small></div><div><span className="client-stat-icon"><FileBarChart2 size={18} /></span><span>Awaiting a view</span><strong>{clientReports.filter(report => report.status === "Not Viewed").length}</strong><small>Shared and available</small></div></div>
     <div className="client-report-panel panel"><div className="client-report-panel-head"><div><h2>Shared reports</h2><p>Distribution log for client-facing report copies.</p></div><span>{visible.length} results</span></div>
